@@ -1,4 +1,10 @@
 Rails.application.routes.draw do
+  get "trucking_companies/show"
+  get "trucking_companies/edit"
+  get "trucking_companies/update"
+  get "farmer_profiles/show"
+  get "farmer_profiles/edit"
+  get "farmer_profiles/update"
   get "home/index"
   devise_for :users
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
