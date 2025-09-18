@@ -1,4 +1,10 @@
 Rails.application.routes.draw do
+  get "shipments/index"
+  get "shipments/show"
+  get "shipments/new"
+  get "shipments/create"
+  get "shipments/edit"
+  get "shipments/update"
   get "market_profiles/show"
   get "market_profiles/edit"
   get "market_profiles/update"
