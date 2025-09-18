@@ -1,70 +1,74 @@
 class ProduceListingsController < ApplicationController
-  before_action :set_produce_listing, only: %i[ show edit update destroy ]
+  before_action :authenticate_user!
+  before_action :ensure_farmer!, except: [:index, :show]
+  before_action :set_produce_listing, only: [:show, :edit, :update, :destroy]
+  before_action :ensure_owner!, only: [:edit, :update, :destroy]
 
-  # GET /produce_listings or /produce_listings.json
   def index
-    @produce_listings = ProduceListing.all
+    @q = ProduceListing.available_now.includes(:farmer_profile).ransack(params[:q])
+    @produce_listings = @q.result.page(params[:page]).per(12)
+    @produce_types = ProduceListing.distinct.pluck(:produce_type).compact.sort
   end
 
-  # GET /produce_listings/1 or /produce_listings/1.json
   def show
+    @produce_request = ProduceRequest.new if current_user&.market?
+    @similar_listings = ProduceListing.available_now
+                                    .where(produce_type: @produce_listing.produce_type)
+                                    .where.not(id: @produce_listing.id)
+                                    .limit(4)
   end
 
-  # GET /produce_listings/new
   def new
-    @produce_listing = ProduceListing.new
+    @produce_listing = current_user.farmer_profile.produce_listings.build
   end
 
-  # GET /produce_listings/1/edit
+  def create
+    @produce_listing = current_user.farmer_profile.produce_listings.build(produce_listing_params)
+
+    if @produce_listing.save
+      # Trigger matching job
+      MatchNotificationJob.perform_later(@produce_listing.id)
+      redirect_to @produce_listing, notice: 'Produce listing was successfully created.'
+    else
+      render :new, status: :unprocessable_entity
+    end
+  end
+
   def edit
   end
 
-  # POST /produce_listings or /produce_listings.json
-  def create
-    @produce_listing = ProduceListing.new(produce_listing_params)
-
-    respond_to do |format|
-      if @produce_listing.save
-        format.html { redirect_to @produce_listing, notice: "Produce listing was successfully created." }
-        format.json { render :show, status: :created, location: @produce_listing }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @produce_listing.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # PATCH/PUT /produce_listings/1 or /produce_listings/1.json
   def update
-    respond_to do |format|
-      if @produce_listing.update(produce_listing_params)
-        format.html { redirect_to @produce_listing, notice: "Produce listing was successfully updated.", status: :see_other }
-        format.json { render :show, status: :ok, location: @produce_listing }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @produce_listing.errors, status: :unprocessable_entity }
-      end
+    if @produce_listing.update(produce_listing_params)
+      redirect_to @produce_listing, notice: 'Produce listing was successfully updated.'
+    else
+      render :edit, status: :unprocessable_entity
     end
   end
 
-  # DELETE /produce_listings/1 or /produce_listings/1.json
   def destroy
-    @produce_listing.destroy!
-
-    respond_to do |format|
-      format.html { redirect_to produce_listings_path, notice: "Produce listing was successfully destroyed.", status: :see_other }
-      format.json { head :no_content }
-    end
+    @produce_listing.destroy
+    redirect_to produce_listings_url, notice: 'Produce listing was successfully deleted.'
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_produce_listing
-      @produce_listing = ProduceListing.find(params.expect(:id))
-    end
 
-    # Only allow a list of trusted parameters through.
-    def produce_listing_params
-      params.fetch(:produce_listing, {})
-    end
+  def set_produce_listing
+    @produce_listing = ProduceListing.find(params[:id])
+  end
+
+  def ensure_farmer!
+    redirect_to root_path, alert: 'Access denied.' unless current_user.farmer?
+  end
+
+  def ensure_owner!
+    redirect_to root_path, alert: 'Access denied.' unless @produce_listing.farmer_profile == current_user.farmer_profile
+  end
+
+  def produce_listing_params
+    params.require(:produce_listing).permit(
+      :title, :description, :produce_type, :quantity, :unit, 
+      :price_per_unit, :available_from, :available_until, :organic,
+      quality_specs: {}
+    )
+  end
 end
