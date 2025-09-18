@@ -1,4 +1,7 @@
 Rails.application.routes.draw do
+  get "market_profiles/show"
+  get "market_profiles/edit"
+  get "market_profiles/update"
   get "trucking_companies/show"
   get "trucking_companies/edit"
   get "trucking_companies/update"
