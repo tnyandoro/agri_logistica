@@ -1,4 +1,10 @@
 Rails.application.routes.draw do
+  namespace :api do
+    namespace :v1 do
+      get "produce_listings/index"
+      get "produce_listings/show"
+    end
+  end
   get "shipments/index"
   get "shipments/show"
   get "shipments/new"
