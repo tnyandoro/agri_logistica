@@ -1,9 +1,23 @@
 
-echo "✅ Rails 8 Agricultural Logistics App scaffolding complete!"
-echo ""
-echo "Next steps:"
-echo "1. Update the generated migration files"
-echo "2. Run: rails db:migrate"
-echo "3. Update models with associations and validations"
-echo "4. Configure routes"
-echo "5. Start the server: rails server"
+namespace :maintenance do
+    desc "Run cleanup tasks"
+    task cleanup: :environment do
+      puts "Running cleanup tasks..."
+      CleanupJob.perform_now
+      puts "Cleanup completed!"
+    end
+  
+    desc "Send daily summaries"
+    task daily_summaries: :environment do
+      puts "Sending daily summaries..."
+      DailySummaryJob.perform_now
+      puts "Daily summaries sent!"
+    end
+  
+    desc "Check for expiring produce"
+    task check_expiring: :environment do
+      puts "Checking for expiring produce..."
+      ProduceExpiryJob.perform_now
+      puts "Expiring produce check completed!"
+    end
+  end

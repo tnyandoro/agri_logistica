@@ -4,7 +4,7 @@ class Users::RegistrationsController < Devise::RegistrationsController
   
     def new
       super
-      @user.role = params[:role] if params[:role].in?(['farmer', 'trucker', 'market'])
+      @user.user_role = params[:user_role] if params[:user_role].in?(['farmer', 'trucker', 'market'])
     end
   
     def create
@@ -40,7 +40,7 @@ class Users::RegistrationsController < Devise::RegistrationsController
     private
   
     def configure_sign_up_params
-      devise_parameter_sanitizer.permit(:sign_up, keys: [:phone, :role])
+      devise_parameter_sanitizer.permit(:sign_up, keys: [:phone, :user_role])
     end
   
     def configure_account_update_params
@@ -48,7 +48,7 @@ class Users::RegistrationsController < Devise::RegistrationsController
     end
   
     def profile_params
-      case current_user.role
+      case current_user.user_role
       when 'farmer'
         farmer_profile_params
       when 'trucker'

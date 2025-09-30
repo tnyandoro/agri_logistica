@@ -4,7 +4,7 @@ class DashboardController < ApplicationController
     def index
       @profile = current_user.profile
       
-      case current_user.role
+      case current_user.user_role
       when 'farmer'
         farmer_dashboard
       when 'trucker'

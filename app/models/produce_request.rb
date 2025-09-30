@@ -6,7 +6,7 @@ class ProduceRequest < ApplicationRecord
   validates :quantity, presence: true, numericality: { greater_than: 0 }
   validates :price_offered, numericality: { greater_than: 0 }, allow_nil: true
   
-  enum status: { pending: 0, accepted: 1, rejected: 2, cancelled: 3, completed: 4 }
+  enum :status, { pending: 0, accepted: 1, rejected: 2, cancelled: 3, completed: 4 }  # FIXED
   
   scope :recent, -> { order(created_at: :desc) }
   scope :active, -> { where(status: [:pending, :accepted]) }

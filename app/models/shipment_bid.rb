@@ -1,44 +1,30 @@
-class Shipment < ApplicationRecord
-  belongs_to :produce_listing
-  belongs_to :produce_request
-  belongs_to :trucking_company, optional: true
-  has_many :shipment_bids, dependent: :destroy
+class ShipmentBid < ApplicationRecord
+  belongs_to :shipment
+  belongs_to :trucking_company
   
-  validates :origin_address, :destination_address, presence: true
-  validates :tracking_number, uniqueness: true, allow_nil: true
+  validates :bid_amount, presence: true, numericality: { greater_than: 0 }
+  validates :pickup_time, :estimated_delivery, presence: true
+  validate :pickup_before_delivery
   
-  enum status: { 
-    pending_bids: 0, 
-    bid_accepted: 1, 
-    pickup_scheduled: 2, 
-    in_transit: 3, 
-    delivered: 4, 
-    cancelled: 5 
-  }
+  enum :status, { pending: 0, accepted: 1, rejected: 2, cancelled: 3 }  # FIXED: Added colon
   
-  before_create :generate_tracking_number
-  scope :available_for_bidding, -> { where(status: :pending_bids) }
-  scope :active, -> { where(status: [:bid_accepted, :pickup_scheduled, :in_transit]) }
+  scope :recent, -> { order(created_at: :desc) }
+  scope :by_amount, -> { order(:bid_amount) }
 
-  def farmer
-    produce_listing.farmer_profile.user
+  def trucker
+    trucking_company.user
   end
 
-  def market
-    produce_request.market_profile.user
-  end
-
-  def accepted_bid
-    shipment_bids.find_by(status: :accepted)
-  end
-
-  def lowest_bid
-    shipment_bids.where(status: :pending).order(:bid_amount).first
+  def delivery_duration_hours
+    return 0 unless pickup_time && estimated_delivery
+    ((estimated_delivery - pickup_time) / 1.hour).round(1)
   end
 
   private
 
-  def generate_tracking_number
-    self.tracking_number = "AG#{Time.current.strftime('%Y%m%d')}#{SecureRandom.hex(4).upcase}"
+  def pickup_before_delivery
+    return unless pickup_time && estimated_delivery
+    
+    errors.add(:estimated_delivery, 'must be after pickup time') if estimated_delivery <= pickup_time
   end
 end

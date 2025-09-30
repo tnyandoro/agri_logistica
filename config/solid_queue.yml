@@ -1,0 +1,16 @@
+production:
+  dispatchers:
+    - polling_interval: 1
+      batch_size: 500
+      concurrency_maintenance_interval: 600
+  
+  workers:
+    - queues: default
+      threads: 3
+      processes: 2
+      polling_interval: 0.1
+    
+    - queues: mailers
+      threads: 2
+      processes: 1
+      polling_interval: 0.5

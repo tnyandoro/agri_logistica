@@ -28,8 +28,8 @@ Rails.application.routes.draw do
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
   root 'home#index'
   
-  # Role-based registration routes
-  get '/register/:role', to: 'users/registrations#new', as: :role_registration, constraints: { role: /farmer|trucker|market/ }
+  # user_role-based registration routes
+  get '/register/:user_role', to: 'users/registrations#new', as: :user_role_registration, constraints: { user_role: /farmer|trucker|market/ }
   get '/complete_profile', to: 'users/registrations#complete_profile'
   patch '/update_profile', to: 'users/registrations#update_profile'
   

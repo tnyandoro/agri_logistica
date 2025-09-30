@@ -3,8 +3,33 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  config.active_job.queue_adapter = :solid_queue
   # Code is not reloaded between requests.
   config.enable_reloading = false
+
+  # Email configuration (use your email service)
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.perform_deliveries = true
+  config.action_mailer.raise_delivery_errors = false
+  
+  config.action_mailer.smtp_settings = {
+    address: 'smtp.gmail.com',
+    port: 587,
+    domain: 'yourdomain.com',
+    user_name: ENV['SMTP_USERNAME'],
+    password: ENV['SMTP_PASSWORD'],
+    authentication: 'plain',
+    enable_starttls_auto: true
+  }
+
+  config.action_mailer.default_url_options = { 
+    host: 'yourdomain.com',
+    protocol: 'https'
+  }
+  
+  # Action Cable configuration
+  config.action_cable.allowed_request_origins = ['https://yourdomain.com']
+  config.action_cable.url = 'wss://yourdomain.com/cable'
 
   # Eager load code on boot for better performance and memory savings (ignored by Rake tasks).
   config.eager_load = true
