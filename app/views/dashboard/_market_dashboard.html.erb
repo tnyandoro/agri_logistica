@@ -1,0 +1,206 @@
+div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  
+  <!-- Quick Stats -->
+  <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-gray-600 text-sm font-medium">Active Requests</p>
+          <p class="text-3xl font-bold text-gray-900 mt-2">
+            <%= @recent_requests&.count || 0 %>
+          </p>
+        </div>
+        <div class="text-4xl">📋</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-gray-600 text-sm font-medium">Available Produce</p>
+          <p class="text-3xl font-bold text-gray-900 mt-2">
+            <%= @available_produce&.count || 0 %>
+          </p>
+        </div>
+        <div class="text-4xl">🌾</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-gray-600 text-sm font-medium">Pending Shipments</p>
+          <p class="text-3xl font-bold text-gray-900 mt-2">0</p>
+        </div>
+        <div class="text-4xl">🚚</div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-gray-600 text-sm font-medium">Total Spent</p>
+          <p class="text-3xl font-bold text-gray-900 mt-2">R 0</p>
+        </div>
+        <div class="text-4xl">💰</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Available Produce -->
+  <div class="lg:col-span-2 bg-white rounded-lg shadow">
+    <div class="p-6 border-b">
+      <div class="flex justify-between items-center">
+        <h3 class="text-xl font-bold text-gray-900">Available Produce</h3>
+        <%= link_to "Browse All", produce_listings_path, class: "text-purple-600 hover:text-purple-700 font-medium" %>
+      </div>
+    </div>
+    <div class="p-6">
+      <% if @available_produce&.any? %>
+        <div class="space-y-4">
+          <% @available_produce.first(5).each do |listing| %>
+            <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <p class="font-medium text-gray-900"><%= listing.title %></p>
+                  <p class="text-sm text-gray-600 mt-1">
+                    <%= listing.produce_type %> • 
+                    <%= listing.quantity %> <%= listing.unit %>
+                    <% if listing.organic %>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 ml-2">
+                        🌱 Organic
+                      </span>
+                    <% end %>
+                  </p>
+                  <p class="text-sm text-gray-600 mt-1">
+                    Farmer: <%= listing.farmer_profile.full_name %>
+                  </p>
+                  <% if listing.price_per_unit %>
+                    <p class="text-sm font-medium text-gray-900 mt-1">
+                      R <%= number_with_precision(listing.price_per_unit, precision: 2) %>/<%= listing.unit %>
+                    </p>
+                  <% end %>
+                </div>
+                <div class="ml-4 flex flex-col space-y-2">
+                  <%= link_to "Request", "#",
+                      class: "bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap" %>
+                  <%= link_to "View Details", produce_listing_path(listing),
+                      class: "bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap" %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="text-center py-8">
+          <div class="text-6xl mb-4">🌾</div>
+          <p class="text-gray-600 mb-4">No produce available at the moment</p>
+          <%= link_to "Browse All Listings", produce_listings_path,
+              class: "inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="p-6 border-b">
+      <h3 class="text-xl font-bold text-gray-900">Quick Actions</h3>
+    </div>
+    <div class="p-6 space-y-3">
+      <%= link_to produce_listings_path,
+          class: "block w-full bg-purple-600 hover:bg-purple-700 text-white text-center px-4 py-3 rounded-lg font-medium transition" do %>
+        🔍 Browse Produce
+      <% end %>
+      
+      <%= link_to "#",
+          class: "block w-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 text-center px-4 py-3 rounded-lg font-medium transition" do %>
+        📋 My Requests
+      <% end %>
+      
+      <%= link_to edit_market_profile_path(@profile),
+          class: "block w-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 text-center px-4 py-3 rounded-lg font-medium transition" do %>
+        ⚙️ Settings
+      <% end %>
+      
+      <%= link_to "#",
+          class: "block w-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 text-center px-4 py-3 rounded-lg font-medium transition" do %>
+        📊 Purchase History
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Recent Requests -->
+  <% if @recent_requests&.any? %>
+    <div class="lg:col-span-3 bg-white rounded-lg shadow">
+      <div class="p-6 border-b">
+        <h3 class="text-xl font-bold text-gray-900">My Recent Requests</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produce</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Farmer</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @recent_requests.each do |request| %>
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900"><%= request.produce_listing.title %></div>
+                  <div class="text-sm text-gray-500"><%= request.produce_listing.produce_type %></div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <%= request.quantity %> <%= request.produce_listing.unit %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <%= request.produce_listing.farmer_profile.full_name %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="px-2 py-1 text-xs font-medium rounded-full
+                    <%= case request.status
+                        when 'accepted' then 'bg-green-100 text-green-800'
+                        when 'pending' then 'bg-yellow-100 text-yellow-800'
+                        when 'rejected' then 'bg-red-100 text-red-800'
+                        else 'bg-gray-100 text-gray-800'
+                        end %>">
+                    <%= request.status.titleize %>
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <%= request.created_at.strftime('%b %d, %Y') %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <%= link_to "View", "#", class: "text-purple-600 hover:text-purple-700 font-medium" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Recommended Produce -->
+  <div class="lg:col-span-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow p-6">
+    <h3 class="text-xl font-bold text-gray-900 mb-4">💡 Recommended for You</h3>
+    <p class="text-gray-600 mb-4">Based on your preferred produce types and purchase history</p>
+    <% if @profile.preferred_produces.any? %>
+      <div class="flex flex-wrap gap-2">
+        <% @profile.preferred_produces.each do |produce_type| %>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white text-gray-700 shadow-sm">
+            <%= produce_type %>
+          </span>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-gray-500 text-sm">Update your profile to add preferred produce types</p>
+    <% end %>
+  </div>
+
+</div>

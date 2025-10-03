@@ -1,25 +1,118 @@
-<h2>Sign up</h2>
+<div class="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center px-4 py-12">
+  <div class="max-w-md w-full">
+    <div class="bg-white shadow-2xl rounded-2xl p-8">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">Create Account</h2>
+        <p class="text-gray-600">Join our agricultural logistics platform</p>
+      </div>
 
-<%= simple_form_for(resource, as: resource_name, url: registration_path(resource_name)) do |f| %>
-  <%= f.error_notification %>
+      <!-- Error Messages -->
+      <% if resource.errors.any? %>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <h3 class="text-red-800 font-medium mb-2">
+            <%= pluralize(resource.errors.count, "error") %> prevented this account from being created:
+          </h3>
+          <ul class="list-disc list-inside text-red-700 text-sm space-y-1">
+            <% resource.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
 
-  <div class="form-inputs">
-    <%= f.input :email,
-                required: true,
-                autofocus: true,
-                input_html: { autocomplete: "email" }%>
-    <%= f.input :password,
-                required: true,
-                hint: ("#{@minimum_password_length} characters minimum" if @minimum_password_length),
-                input_html: { autocomplete: "new-password" } %>
-    <%= f.input :password_confirmation,
-                required: true,
-                input_html: { autocomplete: "new-password" } %>
+      <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "space-y-5" }) do |f| %>
+        
+        <!-- Role Selection -->
+        <div>
+          <%= f.label :user_role, "I am a:", class: "block text-sm font-medium text-gray-700 mb-3" %>
+          <div class="grid grid-cols-3 gap-3">
+            <% [['farmer', 'Farmer', 'bg-green-50 border-green-200 text-green-700'], 
+                ['trucker', 'Trucker', 'bg-blue-50 border-blue-200 text-blue-700'], 
+                ['market', 'Market', 'bg-purple-50 border-purple-200 text-purple-700']].each do |value, label, colors| %>
+              <label class="relative flex flex-col items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md <%= @user&.user_role == value ? colors : 'border-gray-200 hover:border-gray-300' %>">
+                <%= f.radio_button :user_role, value, 
+                    checked: @user&.user_role == value || params[:user_role] == value,
+                    required: true,
+                    class: "sr-only peer" %>
+                <div class="text-center">
+                  <div class="text-2xl mb-1">
+                    <%= case value
+                        when 'farmer' then '🌾'
+                        when 'trucker' then '🚚'
+                        when 'market' then '🏪'
+                        end %>
+                  </div>
+                  <span class="text-sm font-medium"><%= label %></span>
+                </div>
+                <div class="absolute inset-0 border-2 border-transparent rounded-lg peer-checked:border-current pointer-events-none"></div>
+              </label>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div>
+          <%= f.label :email, class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.email_field :email, 
+              autofocus: true, 
+              autocomplete: "email",
+              required: true,
+              placeholder: "your@email.com",
+              class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition" %>
+        </div>
+
+        <!-- Phone -->
+        <div>
+          <%= f.label :phone_number, "Phone Number", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.telephone_field :phone_number, 
+              required: true,
+              placeholder: "+27 12 345 6789",
+              class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition" %>
+          <p class="mt-1 text-xs text-gray-500">Include country code (e.g., +27)</p>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <%= f.label :password, class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.password_field :password, 
+              autocomplete: "new-password",
+              required: true,
+              placeholder: "••••••••",
+              class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition" %>
+          <% if @minimum_password_length %>
+            <p class="mt-1 text-xs text-gray-500">
+              Minimum <%= @minimum_password_length %> characters
+            </p>
+          <% end %>
+        </div>
+
+        <!-- Password Confirmation -->
+        <div>
+          <%= f.label :password_confirmation, "Confirm Password", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.password_field :password_confirmation, 
+              autocomplete: "new-password",
+              required: true,
+              placeholder: "••••••••",
+              class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition" %>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="pt-2">
+          <%= f.submit "Create Account", 
+              class: "w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5" %>
+        </div>
+      <% end %>
+
+      <!-- Additional Links -->
+      <div class="mt-6 text-center space-y-2">
+        <%= render "devise/shared/links" %>
+      </div>
+    </div>
+
+    <!-- Terms Notice -->
+    <p class="text-center text-xs text-gray-500 mt-6">
+      By creating an account, you agree to our Terms of Service and Privacy Policy
+    </p>
   </div>
-
-  <div class="form-actions">
-    <%= f.button :submit, "Sign up" %>
-  </div>
-<% end %>
-
-<%= render "devise/shared/links" %>
+</div>

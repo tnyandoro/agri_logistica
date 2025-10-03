@@ -28,7 +28,7 @@ class DashboardController < ApplicationController
       @total_earnings = ProduceRequest.joins(:produce_listing)
                                     .where(produce_listings: { farmer_profile: @profile })
                                     .where(status: :completed)
-                                    .sum('quantity * price_offered')
+                                    .sum('produce_requests.quantity * produce_requests.price_offered')
     end
   
     def trucker_dashboard

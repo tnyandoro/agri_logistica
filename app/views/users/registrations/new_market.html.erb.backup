@@ -1,0 +1,301 @@
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="inline-block p-3 bg-purple-100 rounded-full mb-4">
+        <span class="text-4xl">🏪</span>
+      </div>
+      <h2 class="text-3xl font-bold text-gray-900 mb-2">
+        Register as a Market
+      </h2>
+      <p class="text-gray-600">
+        Connect with local farmers and access fresh produce for your business
+      </p>
+    </div>
+
+    <!-- Registration Form -->
+    <div class="bg-white rounded-xl shadow-xl p-8">
+      <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "space-y-6" }) do |f| %>
+        
+        <!-- Error Messages -->
+        <%= render "devise/shared/error_messages", resource: resource %>
+
+        <!-- Hidden field for user role -->
+        <%= f.hidden_field :user_role, value: 'market' %>
+
+        <!-- Account Information Section -->
+        <div class="border-b border-gray-200 pb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span class="text-2xl mr-2">👤</span>
+            Account Information
+          </h3>
+          
+          <div class="grid grid-cols-1 gap-6">
+            <!-- Email -->
+            <div>
+              <%= f.label :email, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                Email Address <span class="text-red-500">*</span>
+              <% end %>
+              <%= f.email_field :email, 
+                  autofocus: true, 
+                  autocomplete: "email",
+                  placeholder: "market@example.com",
+                  class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+            </div>
+
+            <!-- Phone Number -->
+            <div>
+              <%= f.label :phone_number, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                Phone Number <span class="text-red-500">*</span>
+              <% end %>
+              <%= f.telephone_field :phone_number,
+                  autocomplete: "tel",
+                  placeholder: "+27 XX XXX XXXX",
+                  class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+            </div>
+
+            <!-- Password -->
+            <div>
+              <%= f.label :password, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                Password <span class="text-red-500">*</span>
+                <% if @minimum_password_length %>
+                  <span class="text-gray-500 text-xs font-normal">
+                    (minimum <%= @minimum_password_length %> characters)
+                  </span>
+                <% end %>
+              <% end %>
+              <%= f.password_field :password, 
+                  autocomplete: "new-password",
+                  placeholder: "Enter a secure password",
+                  class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+            </div>
+
+            <!-- Password Confirmation -->
+            <div>
+              <%= f.label :password_confirmation, "Confirm Password", class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                Confirm Password <span class="text-red-500">*</span>
+              <% end %>
+              <%= f.password_field :password_confirmation, 
+                  autocomplete: "new-password",
+                  placeholder: "Re-enter your password",
+                  class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Market Profile Section -->
+        <%= f.fields_for :market_profile_attributes do |mp| %>
+          <div class="border-b border-gray-200 pb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <span class="text-2xl mr-2">🏪</span>
+              Market Information
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Market Name -->
+              <div class="md:col-span-2">
+                <%= mp.label :market_name, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                  Market/Business Name <span class="text-red-500">*</span>
+                <% end %>
+                <%= mp.text_field :market_name,
+                    placeholder: "e.g., Fresh Produce Market",
+                    class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+              </div>
+
+              <!-- Market Type -->
+              <div>
+                <%= mp.label :market_type, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                  Market Type <span class="text-red-500">*</span>
+                <% end %>
+                <%= mp.select :market_type,
+                    options_for_select([
+                      ['Retail Shop', 'shop'],
+                      ['Supermarket', 'supermarket'],
+                      ['Wholesale Market', 'wholesale'],
+                      ['Processing Plant', 'processing_plant'],
+                      ['Restaurant/Hotel', 'restaurant'],
+                      ['Export Company', 'export'],
+                      ['Other', 'other']
+                    ]),
+                    { prompt: 'Select market type' },
+                    class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+              </div>
+
+              <!-- Contact Person -->
+              <div>
+                <%= mp.label :contact_person, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                  Contact Person
+                <% end %>
+                <%= mp.text_field :contact_person,
+                    placeholder: "Manager or owner name",
+                    class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+              </div>
+
+              <!-- Business Location -->
+              <div class="md:col-span-2">
+                <%= mp.label :location, "Business Address", class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                  Business Address <span class="text-red-500">*</span>
+                <% end %>
+                <%= mp.fields_for :location, mp.object&.location || {} do |loc| %>
+                  <%= loc.text_field :address,
+                      name: "user[market_profile_attributes][location][address]",
+                      placeholder: "Street address, city, province",
+                      class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+                <% end %>
+                <p class="mt-1 text-xs text-gray-500">
+                  This will be used to find nearby farmers and calculate delivery distances
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Produce Preferences Section -->
+          <div class="border-b border-gray-200 pb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <span class="text-2xl mr-2">🌾</span>
+              Produce Preferences
+            </h3>
+
+            <div class="grid grid-cols-1 gap-6">
+              <!-- Preferred Produces -->
+              <div>
+                <%= mp.label :preferred_produces, "What types of produce do you need?", class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                  Preferred Produce Types <span class="text-red-500">*</span>
+                <% end %>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <% ['Vegetables', 'Fruits', 'Grains', 'Legumes', 'Herbs', 'Dairy', 'Eggs', 'Poultry', 'Meat', 'Honey', 'Other'].each do |produce_type| %>
+                    <label class="flex items-center space-x-2 p-3 border border-gray-300 rounded-lg hover:bg-purple-50 cursor-pointer transition">
+                      <%= mp.check_box :preferred_produces, 
+                          { multiple: true, include_hidden: false },
+                          produce_type,
+                          nil,
+                          class: "rounded text-purple-600 focus:ring-purple-500" %>
+                      <span class="text-sm text-gray-700"><%= produce_type %></span>
+                    </label>
+                  <% end %>
+                </div>
+              </div>
+
+              <!-- Purchase Volume -->
+              <div>
+                <%= mp.label :purchase_volume, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                  Expected Monthly Purchase Volume
+                <% end %>
+                <%= mp.select :purchase_volume,
+                    options_for_select([
+                      ['Small (< 500 kg)', 'small'],
+                      ['Medium (500-2000 kg)', 'medium'],
+                      ['Large (2000-5000 kg)', 'large'],
+                      ['Very Large (> 5000 kg)', 'very_large']
+                    ]),
+                    { prompt: 'Select volume' },
+                    class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+              </div>
+
+              <!-- Delivery Preferences -->
+              <div>
+                <%= mp.label :delivery_preferences, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                  Delivery Preferences
+                <% end %>
+                <div class="space-y-2">
+                  <label class="flex items-center space-x-2">
+                    <%= mp.radio_button :delivery_preferences, 'pickup', class: "text-purple-600 focus:ring-purple-500" %>
+                    <span class="text-sm text-gray-700">I will pick up from farms</span>
+                  </label>
+                  <label class="flex items-center space-x-2">
+                    <%= mp.radio_button :delivery_preferences, 'delivery', class: "text-purple-600 focus:ring-purple-500" %>
+                    <span class="text-sm text-gray-700">I need delivery to my location</span>
+                  </label>
+                  <label class="flex items-center space-x-2">
+                    <%= mp.radio_button :delivery_preferences, 'both', checked: true, class: "text-purple-600 focus:ring-purple-500" %>
+                    <span class="text-sm text-gray-700">Either option works</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Information Section -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <span class="text-2xl mr-2">📝</span>
+              Additional Information
+            </h3>
+
+            <div class="grid grid-cols-1 gap-6">
+              <!-- Description -->
+              <div>
+                <%= mp.label :description, "Business Description", class: "block text-sm font-medium text-gray-700 mb-2" %>
+                <%= mp.text_area :description,
+                    rows: 4,
+                    placeholder: "Tell farmers about your business, quality requirements, payment terms, etc.",
+                    class: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" %>
+              </div>
+
+              <!-- Certifications -->
+              <div>
+                <%= mp.label :certifications, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+                  Certifications/Quality Standards
+                <% end %>
+                <div class="space-y-2">
+                  <label class="flex items-center space-x-2">
+                    <%= mp.check_box :organic_certified, class: "rounded text-purple-600 focus:ring-purple-500" %>
+                    <span class="text-sm text-gray-700">We prioritize organic produce</span>
+                  </label>
+                  <label class="flex items-center space-x-2">
+                    <%= mp.check_box :gap_certified, class: "rounded text-purple-600 focus:ring-purple-500" %>
+                    <span class="text-sm text-gray-700">We require GAP certification</span>
+                  </label>
+                  <label class="flex items-center space-x-2">
+                    <%= mp.check_box :haccp_certified, class: "rounded text-purple-600 focus:ring-purple-500" %>
+                    <span class="text-sm text-gray-700">We require HACCP compliance</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Terms and Conditions -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <label class="flex items-start space-x-3 cursor-pointer">
+            <input type="checkbox" required class="mt-1 rounded text-purple-600 focus:ring-purple-500">
+            <span class="text-sm text-gray-700">
+              I agree to the 
+              <%= link_to "Terms of Service", "#", class: "text-purple-600 hover:text-purple-700 underline" %>
+              and
+              <%= link_to "Privacy Policy", "#", class: "text-purple-600 hover:text-purple-700 underline" %>
+            </span>
+          </label>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex flex-col space-y-4">
+          <%= f.submit "Create Market Account",
+              class: "w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-6 rounded-lg transition duration-200 transform hover:scale-[1.02] shadow-lg" %>
+          
+          <%= render "devise/shared/links" %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Benefits Section -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white rounded-lg p-6 shadow-md text-center">
+        <div class="text-4xl mb-3">🌾</div>
+        <h4 class="font-semibold text-gray-900 mb-2">Fresh Produce</h4>
+        <p class="text-sm text-gray-600">Direct access to locally grown fresh produce</p>
+      </div>
+      <div class="bg-white rounded-lg p-6 shadow-md text-center">
+        <div class="text-4xl mb-3">💰</div>
+        <h4 class="font-semibold text-gray-900 mb-2">Better Prices</h4>
+        <p class="text-sm text-gray-600">Competitive pricing by buying directly from farmers</p>
+      </div>
+      <div class="bg-white rounded-lg p-6 shadow-md text-center">
+        <div class="text-4xl mb-3">🤝</div>
+        <h4 class="font-semibold text-gray-900 mb-2">Build Relationships</h4>
+        <p class="text-sm text-gray-600">Create lasting partnerships with local farmers</p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-
 class User < ApplicationRecord
   # Devise modules
   devise :database_authenticatable, :registerable,
@@ -14,13 +13,18 @@ class User < ApplicationRecord
   has_one :market_profile, dependent: :destroy
   has_many :notifications, dependent: :destroy
 
+  # IMPORTANT: Accept nested attributes for registration
+  accepts_nested_attributes_for :farmer_profile, allow_destroy: true
+  accepts_nested_attributes_for :trucking_company, allow_destroy: true
+  accepts_nested_attributes_for :market_profile, allow_destroy: true
+
   # Validations
-  validates :phone, presence: true, uniqueness: true,
+  validates :phone_number, presence: true, uniqueness: true,
                     format: { with: /\A[\+]?[0-9\-\s\(\)]+\z/, message: "Invalid phone format" }
   validates :user_role, presence: true
 
-  # Callbacks
-  after_create :create_user_role_profile
+  # Callbacks - only create profile if it wasn't created via nested attributes
+  after_create :create_user_role_profile, unless: :has_profile?
 
   # Returns the profile associated with the user's role
   def profile
@@ -70,10 +74,30 @@ class User < ApplicationRecord
     end
   end
 
+  # Role name for display
+  def role_name
+    user_role&.to_s&.titleize
+  end
+
   private
+
+  # Check if profile was already created (via nested attributes)
+  def has_profile?
+    case user_role
+    when 'farmer'
+      farmer_profile.present?
+    when 'trucker'
+      trucking_company.present?
+    when 'market'
+      market_profile.present?
+    else
+      false
+    end
+  end
 
   # Automatically creates the associated profile after user creation
   # This creates an empty profile that will be filled in later
+  # Only runs if profile wasn't created via nested attributes
   def create_user_role_profile
     case user_role
     when 'farmer' 

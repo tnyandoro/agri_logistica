@@ -1,60 +1,58 @@
+# config/routes.rb
 Rails.application.routes.draw do
-  namespace :api do
-    namespace :v1 do
-      get "produce_listings/index"
-      get "produce_listings/show"
-    end
-  end
-  get "shipments/index"
-  get "shipments/show"
-  get "shipments/new"
-  get "shipments/create"
-  get "shipments/edit"
-  get "shipments/update"
-  get "market_profiles/show"
-  get "market_profiles/edit"
-  get "market_profiles/update"
-  get "trucking_companies/show"
-  get "trucking_companies/edit"
-  get "trucking_companies/update"
-  get "farmer_profiles/show"
-  get "farmer_profiles/edit"
-  get "farmer_profiles/update"
-  get "home/index"
-  
+  # Root
+  root 'home#index'
+
+  # Devise routes with custom registrations controller
   devise_for :users, controllers: {
     registrations: 'users/registrations'
   }
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
-  root 'home#index'
-  
-  # user_role-based registration routes
-  get '/register/:user_role', to: 'users/registrations#new', as: :user_role_registration, constraints: { user_role: /farmer|trucker|market/ }
-  get '/complete_profile', to: 'users/registrations#complete_profile'
-  patch '/update_profile', to: 'users/registrations#update_profile'
-  
-  # Dashboard
-  get '/dashboard', to: 'dashboard#index'
-  
-  # Main resources
-  resources :produce_listings do
-    resources :produce_requests, except: [:index]
+
+  # Custom registration routes for different user types
+  devise_scope :user do
+    get '/register/farmer', to: 'users/registrations#new', defaults: { user_role: 'farmer' }, as: :farmer_registration
+    get '/register/trucker', to: 'users/registrations#new', defaults: { user_role: 'trucker' }, as: :trucker_registration
+    get '/register/market', to: 'users/registrations#new', defaults: { user_role: 'market' }, as: :market_registration
+    
+    # Profile completion routes (if needed separately)
+    get '/complete_profile', to: 'users/registrations#complete_profile', as: :complete_profile
+    patch '/update_profile', to: 'users/registrations#update_profile', as: :update_profile
   end
-  
-  resources :shipments do
-    resources :shipment_bids, except: [:index, :show]
+
+  # Authenticated routes
+  authenticate :user do
+    # Dashboard
+    get 'dashboard', to: 'dashboard#index', as: :dashboard
+    
+    # Farmer routes
+    resources :farmer_profiles, only: [:show, :edit, :update]
+    resources :produce_listings do
+      resources :produce_requests, except: [:index]
+    end
+    
+    # Trucker routes
+    resources :trucking_companies, only: [:show, :edit, :update]
+    resources :shipments do
+      resources :shipment_bids, except: [:index, :show]
+    end
+    
+    # Market routes
+    resources :market_profiles, only: [:show, :edit, :update]
+    
+    # Common routes
+    resources :notifications, only: [:index, :show, :update]
+    
+    # Search and filtering
+    get '/search', to: 'search#index', as: :search
+    get '/browse/:category', to: 'browse#show', as: :browse_category
   end
-  
-  resources :farmer_profiles, only: [:show, :edit, :update]
-  resources :trucking_companies, only: [:show, :edit, :update]  
-  resources :market_profiles, only: [:show, :edit, :update]
-  
-  resources :notifications, only: [:index, :show, :update]
-  
-  # Search and filtering
-  get '/search', to: 'search#index'
-  get '/browse/:category', to: 'browse#show', as: :browse_category
-  
+
+  # Public routes
+  get 'home/index'
+  get 'about', to: 'pages#about'
+  get 'contact', to: 'pages#contact'
+  get 'how_it_works', to: 'pages#how_it_works'
+
   # API routes for mobile/ajax
   namespace :api do
     namespace :v1 do
@@ -66,14 +64,5 @@ Rails.application.routes.draw do
   end
 
   # Health check
-  get "up" => "rails/health#show", as: :rails_health_check
-
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
-  # Defines the root path route ("/")
-  # root "posts#index"
+  get 'up', to: 'rails/health#show', as: :rails_health_check
 end

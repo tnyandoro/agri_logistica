@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_03_204913) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -46,6 +46,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
     t.decimal "longitude", precision: 15, scale: 10
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "contact_person"
+    t.text "description"
+    t.string "purchase_volume"
+    t.string "delivery_preferences"
+    t.boolean "organic_certified", default: false
+    t.boolean "gap_certified", default: false
+    t.boolean "haccp_certified", default: false
     t.index ["latitude", "longitude"], name: "index_market_profiles_on_latitude_and_longitude"
     t.index ["market_type"], name: "index_market_profiles_on_market_type"
     t.index ["preferred_produces"], name: "index_market_profiles_on_preferred_produces", using: :gin
@@ -171,10 +178,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "user_role", default: 0, null: false
-    t.string "phone", null: false
+    t.string "phone_number", null: false
     t.boolean "verified", default: false
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["phone"], name: "index_users_on_phone", unique: true
+    t.index ["phone_number"], name: "index_users_on_phone_number", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["user_role"], name: "index_users_on_user_role"
   end
