@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_03_204913) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_08_063026) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -68,7 +68,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_03_204913) do
     t.json "data", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "notifiable_type"
+    t.bigint "notifiable_id"
     t.index ["created_at"], name: "index_notifications_on_created_at"
+    t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable"
     t.index ["notification_type"], name: "index_notifications_on_notification_type"
     t.index ["user_id", "read_at"], name: "index_notifications_on_user_id_and_read_at"
     t.index ["user_id"], name: "index_notifications_on_user_id"
@@ -89,6 +92,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_03_204913) do
     t.boolean "organic", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "total_value"
     t.index ["available_from", "available_until"], name: "index_produce_listings_on_available_from_and_available_until"
     t.index ["farmer_profile_id"], name: "index_produce_listings_on_farmer_profile_id"
     t.index ["organic"], name: "index_produce_listings_on_organic"

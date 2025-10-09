@@ -33,6 +33,12 @@ class Shipment < ApplicationRecord
   scope :completed, -> { where(status: [:delivered, :cancelled, :failed]) }
   scope :needs_trucker, -> { where(status: [:pending, :bidding_open], trucking_company_id: nil) }
   scope :by_pickup_date, -> { order(:pickup_date) }
+  scope :available_for_bidding, -> { 
+    where(status: [:pending, :bidding_open])
+    .where(trucking_company_id: nil)
+    .where('pickup_date >= ?', Date.today)
+    .order(created_at: :desc) 
+  }
   
   # Callbacks
   before_validation :calculate_distance, if: :locations_changed?

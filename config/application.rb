@@ -10,7 +10,7 @@ require "action_controller/railtie"
 require "action_mailer/railtie"
 require "action_mailbox/engine"
 require "action_text/engine"
-require "action_view/railtie"
+# require "action_view/railtie"  # Comment this out for pure API
 require "action_cable/engine"
 # require "rails/test_unit/railtie"
 
@@ -21,6 +21,7 @@ module AgriculturalLogistics
     config.load_defaults 8.0
 
     config.autoload_lib(ignore: %w[assets tasks])
+    config.api_only = true
 
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")

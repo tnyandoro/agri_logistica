@@ -23,15 +23,15 @@ class User < ApplicationRecord
                     format: { with: /\A[\+]?[0-9\-\s\(\)]+\z/, message: "Invalid phone format" }
   validates :user_role, presence: true
 
-  # Callbacks - only create profile if it wasn't created via nested attributes
-  after_create :create_user_role_profile, unless: :has_profile?
+  # Commented out - now handled in registration controller for API
+  # after_create :create_user_role_profile, unless: :has_profile?
 
   # Returns the profile associated with the user's role
   def profile
-    case user_role
-    when 'farmer' then farmer_profile
-    when 'trucker' then trucking_company
-    when 'market' then market_profile
+    case user_role&.to_sym
+    when :farmer then farmer_profile
+    when :trucker then trucking_company
+    when :market then market_profile
     else
       nil
     end
@@ -58,17 +58,23 @@ class User < ApplicationRecord
     profile_obj = profile
     return false unless profile_obj
 
-    case user_role
-    when 'farmer'
+    case user_role&.to_sym
+    when :farmer
       profile_obj.full_name.present? && 
       profile_obj.farm_name.present? && 
-      profile_obj.farm_location.present?
-    when 'trucker'
+      profile_obj.farm_location.present? &&
+      profile_obj.farm_location.is_a?(Hash) &&
+      !profile_obj.farm_location.dig('temp')
+    when :trucker
       profile_obj.company_name.present? && 
+      profile_obj.company_name != 'Temp Company' &&
       profile_obj.vehicle_types.any?
-    when 'market'
+    when :market
       profile_obj.market_name.present? && 
-      profile_obj.location.present?
+      profile_obj.market_name != 'Temp Market' &&
+      profile_obj.location.present? &&
+      profile_obj.location.is_a?(Hash) &&
+      !profile_obj.location.dig('temp')
     else
       false
     end
@@ -83,42 +89,15 @@ class User < ApplicationRecord
 
   # Check if profile was already created (via nested attributes)
   def has_profile?
-    case user_role
-    when 'farmer'
+    case user_role&.to_sym
+    when :farmer
       farmer_profile.present?
-    when 'trucker'
+    when :trucker
       trucking_company.present?
-    when 'market'
+    when :market
       market_profile.present?
     else
       false
     end
-  end
-
-  # Automatically creates the associated profile after user creation
-  # This creates an empty profile that will be filled in later
-  # Only runs if profile wasn't created via nested attributes
-  def create_user_role_profile
-    case user_role
-    when 'farmer' 
-      create_farmer_profile!(
-        full_name: '',
-        farm_name: '',
-        farm_location: {}
-      )
-    when 'trucker' 
-      create_trucking_company!(
-        company_name: ''
-      )
-    when 'market' 
-      create_market_profile!(
-        market_name: '',
-        location: {}
-      )
-    end
-  rescue ActiveRecord::RecordInvalid => e
-    # Log the error but don't fail user creation
-    Rails.logger.error "Failed to create profile for user #{id}: #{e.message}"
-    nil
   end
 end

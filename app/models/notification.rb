@@ -3,7 +3,7 @@ class Notification < ApplicationRecord
   
   validates :title, :message, :notification_type, presence: true
   
-  enum :notification_type, {  # FIXED
+  enum :notification_type, {
     match: 0, 
     bid: 1, 
     shipment: 2, 
@@ -23,9 +23,14 @@ class Notification < ApplicationRecord
     update!(read_at: Time.current) unless read?
   end
 
-  after_create_commit :broadcast_notification
+  after_create_commit :broadcast_notification, unless: :skip_broadcast?
   
   private
+  
+  def skip_broadcast?
+    # Skip broadcasting during seed/rake tasks or if Redis isn't available
+    (defined?(Rake) && Rake.application.top_level_tasks.any?) || Rails.env.test?
+  end
   
   def broadcast_notification
     ActionCable.server.broadcast(
@@ -39,5 +44,7 @@ class Notification < ApplicationRecord
         read: false
       }
     )
+  rescue StandardError => e
+    Rails.logger.error "Failed to broadcast notification: #{e.message}"
   end
 end

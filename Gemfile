@@ -22,6 +22,8 @@ gem "jbuilder"
 # Authentication
 gem 'devise'
 
+gem 'jwt', '~> 2.9', '>= 2.9.3'
+
 # Image processing
 gem 'image_processing'
 
@@ -72,6 +74,9 @@ gem "thruster", require: false
 gem 'clockwork', '~> 3.0', '>= 3.0.2'
 gem "rack-cors", require: "rack/cors"
 
+gem 'groupdate'
+
+
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"
 
@@ -81,6 +86,8 @@ group :development, :test do
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
+
+  gem 'faker'
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
@@ -92,3 +99,5 @@ group :development do
   gem 'annotate'
   gem 'letter_opener'
 end
+
+gem "chartkick", "~> 5.2"
