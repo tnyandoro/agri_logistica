@@ -9,12 +9,17 @@ Rails.application.routes.draw do
              skip: [:passwords, :confirmations, :unlocks]
 
   # Root endpoint - API information
-  root to: 'api/v1/home#index'  # <- updated to namespaced controller
+  root to: 'api/v1/home#index'
 
   # API routes
   namespace :api do
     namespace :v1 do
-      # HomeController (API info) is already set as root
+      get "portal", to: "portal#index"
+      # Authentication endpoints
+      post 'login', to: 'sessions#create'
+      delete 'logout', to: 'sessions#destroy'
+      post 'users', to: 'registrations#create'
+      
       # Dashboard
       get 'dashboard', to: 'dashboard#index'
       

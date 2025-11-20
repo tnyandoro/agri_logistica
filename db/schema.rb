@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_08_063026) do
+ActiveRecord::Schema[8.0].define(version: 2025_11_20_100807) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -53,6 +53,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_08_063026) do
     t.boolean "organic_certified", default: false
     t.boolean "gap_certified", default: false
     t.boolean "haccp_certified", default: false
+    t.string "additional_requirements"
     t.index ["latitude", "longitude"], name: "index_market_profiles_on_latitude_and_longitude"
     t.index ["market_type"], name: "index_market_profiles_on_market_type"
     t.index ["preferred_produces"], name: "index_market_profiles_on_preferred_produces", using: :gin

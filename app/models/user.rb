@@ -23,6 +23,9 @@ class User < ApplicationRecord
                     format: { with: /\A[\+]?[0-9\-\s\(\)]+\z/, message: "Invalid phone format" }
   validates :user_role, presence: true
 
+  scope :farmers, -> { where(user_role: :farmer) }
+  scope :truckers, -> { where(user_role: :trucker) }
+  scope :markets, -> { where(user_role: :market) }
   # Commented out - now handled in registration controller for API
   # after_create :create_user_role_profile, unless: :has_profile?
 
