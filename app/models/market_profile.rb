@@ -6,7 +6,8 @@ class MarketProfile < ApplicationRecord
   validates :market_type, presence: true
   validates :location, presence: true
   validates :preferred_produces, presence: true
-  
+  validates :business_name, presence: true
+
   enum :market_type, {  # FIXED: Added colon before market_type
     shop: 0, 
     supermarket: 1, 

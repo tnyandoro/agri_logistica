@@ -1,188 +1,213 @@
+# app/controllers/api/v1/dashboard_controller.rb
 module Api
   module V1
-    class DashboardController < BaseController
-      before_action :authenticate_user!
-
+    class Api::V1::DashboardController < Api::V1::BaseController
       def index
+        render json: {
+          user_role: current_user.user_role,
+          profile: profile_data,
+          statistics: build_statistics,
+          recent_listings: recent_listings_data,
+          charts: build_charts
+        }
+      rescue StandardError => e
+        Rails.logger.error "Dashboard Error: #{e.message}\n#{e.backtrace.join("\n")}"
+        render json: { 
+          error: 'Failed to load dashboard data',
+          message: e.message,
+          user_role: current_user.user_role,
+          statistics: {},
+          recent_listings: []
+        }, status: :internal_server_error
+      end
+      
+      private
+      
+      def profile_data
+        # Use the User model's built-in profile method
+        profile = current_user.profile
+        
+        return nil unless profile
+        
+        # Build profile data based on the profile type
+        data = { id: profile.id }
+        
         case current_user.user_role
         when 'farmer'
-          render json: farmer_dashboard, status: :ok
-        when 'trucker'
-          render json: trucker_dashboard, status: :ok
-        when 'market'
-          render json: market_dashboard, status: :ok
-        else
-          render json: { error: 'Invalid user role' }, status: :bad_request
-        end
-      end
-
-      private
-
-      def farmer_dashboard
-        profile = current_user.farmer_profile
-        
-        return { error: 'Farmer profile not found' } unless profile
-
-        recent_listings = profile.produce_listings.recent.limit(5)
-        total_listings = profile.produce_listings.count
-
-        active_requests = ProduceRequest.joins(:produce_listing)
-                                       .where(produce_listings: { farmer_profile: profile })
-                                       .where(status: :pending)
-                                       .count
-
-        total_earnings = ProduceRequest.joins(:produce_listing)
-                                      .where(produce_listings: { farmer_profile: profile })
-                                      .where(status: :completed)
-                                      .sum('produce_requests.quantity * produce_requests.price_offered')
-
-        # Chart data
-        produce_summary = profile.produce_listings
-                                .group(:produce_type)
-                                .sum(:quantity)
-
-        monthly_earnings = ProduceRequest.joins(:produce_listing)
-                                        .where(produce_listings: { farmer_profile: profile })
-                                        .where(status: :completed)
-                                        .where("produce_requests.created_at >= ?", 6.months.ago.beginning_of_month)
-                                        .group_by_month('produce_requests.created_at', last: 6, format: "%b %Y")
-                                        .sum('produce_requests.quantity * produce_requests.price_offered')
-
-        {
-          user_role: 'farmer',
-          profile: {
-            id: profile.id,
-            name: profile.name,
+          data.merge!(
+            business_name: profile.business_name,
+            full_name: profile.full_name,
+            farm_name: profile.farm_name,
             location: profile.location,
-            farm_size: profile.farm_size
-          },
-          statistics: {
-            total_listings: total_listings,
-            active_requests: active_requests,
-            total_earnings: total_earnings.to_f
-          },
-          recent_listings: recent_listings.map { |listing| serialize_listing(listing) },
-          charts: {
-            produce_summary: produce_summary.map { |type, quantity| { produce_type: type, quantity: quantity } },
-            monthly_earnings: monthly_earnings.map { |date, amount| { month: date, earnings: amount.to_f } }
-          },
-          unread_notifications: current_user.notifications.unread.count
-        }
-      end
-
-      def trucker_dashboard
-        profile = current_user.trucking_company
-        
-        return { error: 'Trucking company profile not found' } unless profile
-
-        available_shipments = Shipment.available_for_bidding
-                                     .includes(:produce_listing, :produce_request)
-                                     .limit(10)
-        
-        active_bids = profile.shipment_bids.pending.count
-        completed_shipments = profile.shipments.where(status: :delivered).count
-        active_shipments = profile.shipments.active.includes(:produce_listing, :produce_request)
-
-        {
-          user_role: 'trucker',
-          profile: {
-            id: profile.id,
+            produce_types: profile.produce_types,
+            production_capacity: profile.production_capacity
+          )
+        when 'trucker'
+          data.merge!(
             company_name: profile.company_name,
-            contact_person: profile.contact_person,
-            fleet_size: profile.fleet_size
-          },
-          statistics: {
-            active_bids: active_bids,
-            completed_shipments: completed_shipments,
-            active_shipments_count: active_shipments.count
-          },
-          available_shipments: available_shipments.map { |shipment| serialize_shipment(shipment) },
-          active_shipments: active_shipments.map { |shipment| serialize_shipment(shipment) },
-          unread_notifications: current_user.notifications.unread.count
-        }
-      end
-
-      def market_dashboard
-        profile = current_user.market_profile
-        
-        return { error: 'Market profile not found' } unless profile
-
-        matching_service = ProduceMatchingService.new(profile)
-        recommended_listings = matching_service.find_matches.limit(8)
-        
-        active_requests = profile.produce_requests.active.count
-        recent_requests = profile.produce_requests.recent.includes(:produce_listing).limit(5)
-
-        {
-          user_role: 'market',
-          profile: {
-            id: profile.id,
+            vehicle_types: profile.vehicle_types,
+            capacity: profile.capacity,
+            location: profile.location
+          )
+        when 'market'
+          data.merge!(
             market_name: profile.market_name,
             location: profile.location,
-            market_type: profile.market_type
-          },
-          statistics: {
-            active_requests: active_requests,
-            total_requests: profile.produce_requests.count
-          },
-          recommended_listings: recommended_listings.map { |listing| serialize_listing(listing) },
-          recent_requests: recent_requests.map { |request| serialize_request(request) },
-          unread_notifications: current_user.notifications.unread.count
+            description: profile.description
+          )
+        end
+        
+        data.compact
+      end
+      
+      def build_statistics
+        case current_user.user_role
+        when 'farmer'
+          build_farmer_stats
+        when 'trucker'
+          build_trucker_stats
+        when 'market'
+          build_market_stats
+        else
+          {}
+        end
+      end
+      
+      def build_farmer_stats
+        farmer_profile = current_user.farmer_profile
+        return { total_listings: 0, active_listings: 0, total_revenue: 0 } unless farmer_profile
+        
+        # Use produce_listings from FarmerProfile
+        listings = farmer_profile.produce_listings
+        
+        {
+          total_listings: listings.count,
+          active_listings: listings.where(status: 'active').count,
+          total_revenue: calculate_farmer_revenue(farmer_profile),
+          production_capacity: farmer_profile.production_capacity || 0,
+          produce_types: farmer_profile.produce_types.size
+        }
+      rescue StandardError => e
+        Rails.logger.error "Error building farmer stats: #{e.message}"
+        { total_listings: 0, active_listings: 0, total_revenue: 0 }
+      end
+      
+      def build_buyer_stats
+        # If you have a buyer/purchaser role in the future
+        {
+          total_orders: 0,
+          pending_orders: 0,
+          completed_orders: 0
         }
       end
-
-      # Serializer helper methods
-      def serialize_listing(listing)
+      
+      def build_trucker_stats
+        trucking_company = current_user.trucking_company
+        return { total_deliveries: 0, active_deliveries: 0, completed_deliveries: 0 } unless trucking_company
+        
+        # Adjust based on your delivery/transport model
+        deliveries = trucking_company.try(:deliveries) || []
+        
         {
-          id: listing.id,
-          produce_type: listing.produce_type,
-          quantity: listing.quantity,
-          unit: listing.unit,
-          price_per_unit: listing.price_per_unit,
-          available_from: listing.available_from,
-          available_until: listing.available_until,
-          status: listing.status,
-          farmer: {
-            id: listing.farmer_profile.id,
-            name: listing.farmer_profile.name,
-            location: listing.farmer_profile.location
+          total_deliveries: deliveries.count,
+          active_deliveries: deliveries.where(status: 'active').count,
+          completed_deliveries: deliveries.where(status: 'completed').count,
+          fleet_size: trucking_company.fleet_size || 0
+        }
+      rescue StandardError => e
+        Rails.logger.error "Error building trucker stats: #{e.message}"
+        { total_deliveries: 0, active_deliveries: 0, completed_deliveries: 0 }
+      end
+      
+      def build_market_stats
+        market_profile = current_user.market_profile
+        return { total_orders: 0, total_suppliers: 0 } unless market_profile
+        
+        # Adjust based on your market's associations
+        {
+          total_listings: ProduceListing.count,
+          total_requests: ProduceRequest.count,
+          active_farmers: User.user_role_farmer.count,
+          active_truckers: User.user_role_trucker.count,
+          recent_activity: User.where('last_sign_in_at > ?', 7.days.ago).count
+        }
+      rescue StandardError => e
+        Rails.logger.error "Error building market stats: #{e.message}"
+        { total_listings: 0, total_requests: 0, active_farmers: 0 }
+      end
+      
+      def calculate_farmer_revenue(farmer_profile)
+        # Calculate from completed produce requests
+        ProduceRequest.joins(:produce_listing)
+                      .where(produce_listings: { farmer_profile_id: farmer_profile.id })
+                      .where(status: 'completed')
+                      .sum('produce_requests.quantity * produce_requests.price_offered')
+      rescue StandardError => e
+        Rails.logger.error "Error calculating revenue: #{e.message}"
+        0
+      end
+      
+      def recent_listings_data
+        return [] unless current_user.user_role == 'farmer'
+        
+        farmer_profile = current_user.farmer_profile
+        return [] unless farmer_profile
+        
+        farmer_profile.produce_listings
+                      .order(created_at: :desc)
+                      .limit(5)
+                      .map do |listing|
+          {
+            id: listing.id,
+            title: listing.try(:title) || listing.try(:produce_type) || "Listing ##{listing.id}",
+            price: listing.try(:price_per_unit),
+            quantity: listing.try(:quantity_available),
+            unit: listing.try(:unit),
+            status: listing.try(:status),
+            created_at: listing.created_at.strftime("%Y-%m-%d %H:%M")
           }
-        }
+        end
+      rescue StandardError => e
+        Rails.logger.error "Error fetching recent listings: #{e.message}"
+        []
       end
-
-      def serialize_shipment(shipment)
-        {
-          id: shipment.id,
-          status: shipment.status,
-          pickup_location: shipment.pickup_location,
-          delivery_location: shipment.delivery_location,
-          pickup_date: shipment.pickup_date,
-          delivery_date: shipment.delivery_date,
-          produce_listing: shipment.produce_listing ? {
-            id: shipment.produce_listing.id,
-            produce_type: shipment.produce_listing.produce_type,
-            quantity: shipment.produce_listing.quantity
-          } : nil,
-          produce_request: shipment.produce_request ? {
-            id: shipment.produce_request.id,
-            quantity: shipment.produce_request.quantity
-          } : nil
-        }
+      
+      def build_charts
+        case current_user.user_role
+        when 'farmer'
+          build_farmer_charts
+        when 'trucker'
+          build_trucker_charts
+        when 'market'
+          build_market_charts
+        else
+          {}
+        end
+      rescue StandardError => e
+        Rails.logger.error "Error building charts: #{e.message}"
+        {}
       end
-
-      def serialize_request(request)
+      
+      def build_farmer_charts
+        farmer_profile = current_user.farmer_profile
+        return {} unless farmer_profile
+        
         {
-          id: request.id,
-          quantity: request.quantity,
-          price_offered: request.price_offered,
-          status: request.status,
-          delivery_date: request.delivery_date,
-          produce_listing: request.produce_listing ? {
-            id: request.produce_listing.id,
-            produce_type: request.produce_listing.produce_type,
-            farmer_name: request.produce_listing.farmer_profile.name
-          } : nil
+          monthly_earnings: farmer_profile.monthly_earnings
         }
+      rescue StandardError => e
+        Rails.logger.error "Error building farmer charts: #{e.message}"
+        {}
+      end
+      
+      def build_trucker_charts
+        # Add trucker-specific charts if needed
+        {}
+      end
+      
+      def build_market_charts
+        # Add market-specific charts if needed
+        {}
       end
     end
   end

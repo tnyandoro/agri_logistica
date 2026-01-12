@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_11_20_100807) do
+ActiveRecord::Schema[8.0].define(version: 2025_11_20_133343) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -28,6 +28,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_20_100807) do
     t.decimal "longitude", precision: 15, scale: 10
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "business_name"
     t.index ["latitude", "longitude"], name: "index_farmer_profiles_on_latitude_and_longitude"
     t.index ["produce_types"], name: "index_farmer_profiles_on_produce_types", using: :gin
     t.index ["user_id"], name: "index_farmer_profiles_on_user_id", unique: true
@@ -54,6 +55,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_20_100807) do
     t.boolean "gap_certified", default: false
     t.boolean "haccp_certified", default: false
     t.string "additional_requirements"
+    t.string "business_name"
     t.index ["latitude", "longitude"], name: "index_market_profiles_on_latitude_and_longitude"
     t.index ["market_type"], name: "index_market_profiles_on_market_type"
     t.index ["preferred_produces"], name: "index_market_profiles_on_preferred_produces", using: :gin
@@ -169,6 +171,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_20_100807) do
     t.string "contact_person"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "business_name"
     t.index ["company_name"], name: "index_trucking_companies_on_company_name"
     t.index ["user_id"], name: "index_trucking_companies_on_user_id", unique: true
     t.index ["vehicle_types"], name: "index_trucking_companies_on_vehicle_types", using: :gin

@@ -13,6 +13,8 @@ class TruckingCompany < ApplicationRecord
   attribute :rates, default: []
   
   # Conditional validations
+  validates :business_name, presence: true, length: { minimum: 2, maximum: 100 }, 
+            unless: :skip_validation?
   validates :company_name, presence: true, length: { minimum: 2, maximum: 100 }, 
             unless: :skip_validation?
   validates :vehicle_types, presence: true, unless: :skip_validation?
@@ -53,6 +55,11 @@ class TruckingCompany < ApplicationRecord
     shipments.where(status: [:pending, :in_transit]).count
   end
 
+  # Returns the display name - prioritizes business_name
+  def display_name
+    business_name.presence || company_name.presence || "Unnamed Company"
+  end
+
   private
 
   def skip_validation?
@@ -60,6 +67,6 @@ class TruckingCompany < ApplicationRecord
   end
 
   def all_fields_blank?
-    company_name.blank? && contact_person.blank?
+    business_name.blank? && company_name.blank? && contact_person.blank?
   end
 end

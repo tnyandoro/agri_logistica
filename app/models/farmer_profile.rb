@@ -16,7 +16,8 @@ class FarmerProfile < ApplicationRecord
   validates :farm_location, presence: true, unless: :skip_validation?
   validates :produce_types, presence: true, unless: :skip_validation?
   validates :production_capacity, numericality: { greater_than: 0 }, allow_nil: true, unless: :skip_validation?
-
+  validates :business_name, presence: true
+  
   # Geocoding
   geocoded_by :address
   after_validation :geocode, if: :should_geocode?

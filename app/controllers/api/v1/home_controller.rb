@@ -1,7 +1,10 @@
 module Api
   module V1
-    class HomeController < ApplicationController
-      skip_before_action :authenticate_user!
+    class HomeController < Api::V1::BaseController
+
+      skip_before_action :authenticate_api_user!
+      skip_before_action :check_profile_completion
+
       
       def index
         render json: {
