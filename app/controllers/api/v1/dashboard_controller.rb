@@ -1,213 +1,186 @@
-# app/controllers/api/v1/dashboard_controller.rb
 module Api
   module V1
-    class Api::V1::DashboardController < Api::V1::BaseController
+    class DashboardController < Api::V1::BaseController
       def index
+        profile = current_user.profile
+
+        unless profile
+          return render json: {
+            error: 'Profile incomplete',
+            redirect_to: complete_profile_path
+          }, status: :unprocessable_entity
+        end
+
         render json: {
           user_role: current_user.user_role,
-          profile: profile_data,
+          profile: profile_data(profile),
           statistics: build_statistics,
           recent_listings: recent_listings_data,
           charts: build_charts
         }
       rescue StandardError => e
         Rails.logger.error "Dashboard Error: #{e.message}\n#{e.backtrace.join("\n")}"
-        render json: { 
+        render json: {
           error: 'Failed to load dashboard data',
-          message: e.message,
-          user_role: current_user.user_role,
-          statistics: {},
-          recent_listings: []
+          message: e.message
         }, status: :internal_server_error
       end
-      
+
       private
-      
-      def profile_data
-        # Use the User model's built-in profile method
-        profile = current_user.profile
-        
-        return nil unless profile
-        
-        # Build profile data based on the profile type
+
+      # ---------------------------------------------------
+      # PROFILE DATA
+      # ---------------------------------------------------
+      def profile_data(profile)
         data = { id: profile.id }
-        
+
         case current_user.user_role
         when 'farmer'
           data.merge!(
             business_name: profile.business_name,
             full_name: profile.full_name,
             farm_name: profile.farm_name,
-            location: profile.location,
+            farm_location: profile.farm_location,
             produce_types: profile.produce_types,
             production_capacity: profile.production_capacity
           )
         when 'trucker'
           data.merge!(
+            business_name: profile.business_name,
             company_name: profile.company_name,
             vehicle_types: profile.vehicle_types,
-            capacity: profile.capacity,
-            location: profile.location
+            fleet_size: profile.fleet_size
           )
         when 'market'
           data.merge!(
+            business_name: profile.business_name,
             market_name: profile.market_name,
-            location: profile.location,
-            description: profile.description
+            description: profile.description,
+            location: profile.location
           )
         end
-        
+
         data.compact
       end
-      
+
+      # ---------------------------------------------------
+      # STATISTICS
+      # ---------------------------------------------------
       def build_statistics
         case current_user.user_role
-        when 'farmer'
-          build_farmer_stats
-        when 'trucker'
-          build_trucker_stats
-        when 'market'
-          build_market_stats
-        else
-          {}
+        when 'farmer'  then build_farmer_stats
+        when 'trucker' then build_trucker_stats
+        when 'market'  then build_market_stats
+        else {}
         end
       end
-      
+
       def build_farmer_stats
-        farmer_profile = current_user.farmer_profile
-        return { total_listings: 0, active_listings: 0, total_revenue: 0 } unless farmer_profile
-        
-        # Use produce_listings from FarmerProfile
-        listings = farmer_profile.produce_listings
-        
+        farmer = current_user.farmer_profile
+        return empty_farmer_stats unless farmer
+
+        listings = farmer.produce_listings
+
         {
           total_listings: listings.count,
-          active_listings: listings.where(status: 'active').count,
-          total_revenue: calculate_farmer_revenue(farmer_profile),
-          production_capacity: farmer_profile.production_capacity || 0,
-          produce_types: farmer_profile.produce_types.size
-        }
-      rescue StandardError => e
-        Rails.logger.error "Error building farmer stats: #{e.message}"
-        { total_listings: 0, active_listings: 0, total_revenue: 0 }
-      end
-      
-      def build_buyer_stats
-        # If you have a buyer/purchaser role in the future
-        {
-          total_orders: 0,
-          pending_orders: 0,
-          completed_orders: 0
+          active_listings: listings.where(status: 0).count, # enum :active
+          total_revenue: calculate_farmer_revenue(farmer),
+          produce_types: farmer.produce_types.size
         }
       end
-      
+
       def build_trucker_stats
-        trucking_company = current_user.trucking_company
-        return { total_deliveries: 0, active_deliveries: 0, completed_deliveries: 0 } unless trucking_company
-        
-        # Adjust based on your delivery/transport model
-        deliveries = trucking_company.try(:deliveries) || []
-        
+        company = current_user.trucking_company
+        return empty_trucker_stats unless company
+
+        shipments = company.shipments
+
         {
-          total_deliveries: deliveries.count,
-          active_deliveries: deliveries.where(status: 'active').count,
-          completed_deliveries: deliveries.where(status: 'completed').count,
-          fleet_size: trucking_company.fleet_size || 0
+          total_shipments: shipments.count,
+          active_shipments: shipments.where(status: [0, 1]).count,
+          completed_shipments: shipments.where(status: 2).count,
+          fleet_size: company.fleet_size || 0
         }
-      rescue StandardError => e
-        Rails.logger.error "Error building trucker stats: #{e.message}"
-        { total_deliveries: 0, active_deliveries: 0, completed_deliveries: 0 }
       end
-      
+
       def build_market_stats
-        market_profile = current_user.market_profile
-        return { total_orders: 0, total_suppliers: 0 } unless market_profile
-        
-        # Adjust based on your market's associations
         {
+          total_farmers: FarmerProfile.count,
+          total_truckers: TruckingCompany.count,
           total_listings: ProduceListing.count,
-          total_requests: ProduceRequest.count,
-          active_farmers: User.user_role_farmer.count,
-          active_truckers: User.user_role_trucker.count,
-          recent_activity: User.where('last_sign_in_at > ?', 7.days.ago).count
+          total_requests: ProduceRequest.count
         }
-      rescue StandardError => e
-        Rails.logger.error "Error building market stats: #{e.message}"
-        { total_listings: 0, total_requests: 0, active_farmers: 0 }
       end
-      
-      def calculate_farmer_revenue(farmer_profile)
-        # Calculate from completed produce requests
-        ProduceRequest.joins(:produce_listing)
-                      .where(produce_listings: { farmer_profile_id: farmer_profile.id })
-                      .where(status: 'completed')
-                      .sum('produce_requests.quantity * produce_requests.price_offered')
-      rescue StandardError => e
-        Rails.logger.error "Error calculating revenue: #{e.message}"
-        0
+
+      # ---------------------------------------------------
+      # FARMER REVENUE
+      # ---------------------------------------------------
+      def calculate_farmer_revenue(farmer)
+        ProduceRequest
+          .joins(:produce_listing)
+          .where(produce_listings: { farmer_profile_id: farmer.id })
+          .where(status: 2) # completed
+          .sum('produce_requests.quantity * COALESCE(produce_requests.price_offered, 0)')
       end
-      
+
+      # ---------------------------------------------------
+      # RECENT LISTINGS
+      # ---------------------------------------------------
       def recent_listings_data
         return [] unless current_user.user_role == 'farmer'
-        
-        farmer_profile = current_user.farmer_profile
-        return [] unless farmer_profile
-        
-        farmer_profile.produce_listings
-                      .order(created_at: :desc)
-                      .limit(5)
-                      .map do |listing|
+
+        farmer = current_user.farmer_profile
+        return [] unless farmer
+
+        farmer.produce_listings
+              .order(created_at: :desc)
+              .limit(5)
+              .map do |listing|
           {
             id: listing.id,
-            title: listing.try(:title) || listing.try(:produce_type) || "Listing ##{listing.id}",
-            price: listing.try(:price_per_unit),
-            quantity: listing.try(:quantity_available),
-            unit: listing.try(:unit),
-            status: listing.try(:status),
-            created_at: listing.created_at.strftime("%Y-%m-%d %H:%M")
+            title: listing.title,
+            produce_type: listing.produce_type,
+            price_per_unit: listing.price_per_unit,
+            quantity: listing.quantity,
+            unit: listing.unit,
+            status: listing.status,
+            created_at: listing.created_at.strftime('%Y-%m-%d %H:%M')
           }
         end
-      rescue StandardError => e
-        Rails.logger.error "Error fetching recent listings: #{e.message}"
-        []
       end
-      
+
+      # ---------------------------------------------------
+      # CHARTS (SAFE PLACEHOLDERS)
+      # ---------------------------------------------------
       def build_charts
         case current_user.user_role
-        when 'farmer'
-          build_farmer_charts
-        when 'trucker'
-          build_trucker_charts
-        when 'market'
-          build_market_charts
-        else
-          {}
+        when 'farmer'  then build_farmer_charts
+        when 'trucker' then {}
+        when 'market'  then {}
+        else {}
         end
-      rescue StandardError => e
-        Rails.logger.error "Error building charts: #{e.message}"
-        {}
       end
-      
+
       def build_farmer_charts
-        farmer_profile = current_user.farmer_profile
-        return {} unless farmer_profile
-        
+        farmer = current_user.farmer_profile
+        return {} unless farmer
+
         {
-          monthly_earnings: farmer_profile.monthly_earnings
+          listings_per_month: farmer.produce_listings
+                                     .group_by_month(:created_at)
+                                     .count
         }
-      rescue StandardError => e
-        Rails.logger.error "Error building farmer charts: #{e.message}"
-        {}
       end
-      
-      def build_trucker_charts
-        # Add trucker-specific charts if needed
-        {}
+
+      # ---------------------------------------------------
+      # EMPTY FALLBACKS
+      # ---------------------------------------------------
+      def empty_farmer_stats
+        { total_listings: 0, active_listings: 0, total_revenue: 0, produce_types: 0 }
       end
-      
-      def build_market_charts
-        # Add market-specific charts if needed
-        {}
+
+      def empty_trucker_stats
+        { total_shipments: 0, active_shipments: 0, completed_shipments: 0, fleet_size: 0 }
       end
     end
   end
