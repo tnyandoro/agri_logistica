@@ -22,7 +22,6 @@ class ApplicationController < ActionController::Base
       destroy_user_session_path,
       new_user_session_path,
       new_user_registration_path,
-      dashboard_path,
       root_path
     ]
 
@@ -31,10 +30,12 @@ class ApplicationController < ActionController::Base
 
     return if request.path.in?(skip_paths)
 
-    redirect_to dashboard_path, alert: 'Please complete your profile to continue.' if profile_incomplete?
+    if profile_incomplete?
+      redirect_to complete_profile_path, alert: 'Please complete your profile to continue.'
+    end
   end
 
   def profile_incomplete?
-    current_user && !current_user.profile_complete?
+    current_user.present? && current_user.profile.nil?
   end
 end
