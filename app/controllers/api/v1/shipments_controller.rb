@@ -63,30 +63,51 @@ module Api
 
       # POST /api/v1/shipments
       def create
-        # Market can create shipment after farmer accepts
+        # Find the produce request
+        produce_request = ProduceRequest.find(params[:produce_request_id])
+        produce_listing = produce_request.produce_listing
+
+        # Initialize shipment (not saved yet)
         shipment = Shipment.new(shipment_params)
         shipment.status = 'pending'
-        shipment.produce_request = ProduceRequest.find(params[:produce_request_id])
-        shipment.produce_listing ||= shipment.produce_request.produce_listing
+        shipment.produce_request = produce_request
+        shipment.produce_listing ||= produce_listing
 
         # Calculate distance if lat/long available
-        if shipment.produce_listing.latitude && shipment.produce_request.market_profile.latitude
+        if produce_listing.latitude && produce_request.market_profile.latitude
           shipment.distance_km = Geocoder::Calculations.distance_between(
-            [shipment.produce_listing.latitude, shipment.produce_listing.longitude],
-            [shipment.produce_request.market_profile.latitude, shipment.produce_request.market_profile.longitude]
+            [produce_listing.latitude, produce_listing.longitude],
+            [produce_request.market_profile.latitude, produce_request.market_profile.longitude]
           ).round(2)
         end
 
+        # Calculate agreed price based on distance
         shipment.agreed_price ||= shipment.calculate_shipping_cost(shipment.distance_km)
 
-        if shipment.save
+        if params[:preview].to_s == 'true'
+          # For preview: do not save, just return calculated info
           render json: {
             success: true,
-            message: 'Shipment created successfully',
-            data: ShipmentSerializer.new(shipment).as_json
-          }, status: :created
+            preview: true,
+            message: 'Shipment cost and distance preview',
+            data: {
+              distance_km: shipment.distance_km,
+              agreed_price: shipment.agreed_price,
+              pickup_location: shipment.pickup_location,
+              delivery_location: shipment.delivery_location
+            }
+          }
         else
-          render_error('Failed to create shipment', errors: shipment.errors.full_messages)
+          # Save normally
+          if shipment.save
+            render json: {
+              success: true,
+              message: 'Shipment created successfully',
+              data: ShipmentSerializer.new(shipment).as_json
+            }, status: :created
+          else
+            render_error('Failed to create shipment', errors: shipment.errors.full_messages)
+          end
         end
       end
 
@@ -104,21 +125,35 @@ module Api
         end
       end
 
-      # PATCH /api/v1/shipments/:id/accept
+    # PATCH /api/v1/shipments/:id/accept
       def accept
         authorize_trucker!
-
         if @shipment.pending?
           @shipment.update!(status: 'in_transit', trucking_company: current_user.trucking_company)
-          render json: {
-            success: true,
-            message: 'Shipment accepted, now in transit',
-            data: ShipmentSerializer.new(@shipment).as_json
-          }
+
+          # Notify market
+          NotificationService.notify_market_of_shipment_acceptance(@shipment)
+
+          render json: { success: true, message: 'Shipment accepted, now in transit', data: ShipmentSerializer.new(@shipment).as_json }
         else
           render_error('Shipment cannot be accepted')
         end
       end
+
+      # PATCH /api/v1/shipments/:id/cancel
+      def cancel
+        if @shipment.pending? && (current_user.user_role.in?(%w[market farmer]))
+          @shipment.update!(status: 'cancelled')
+
+          # Notify market
+          NotificationService.notify_market_of_shipment_cancellation(@shipment)
+
+          render json: { success: true, message: 'Shipment cancelled', data: ShipmentSerializer.new(@shipment).as_json }
+        else
+          render_error('Cannot cancel shipment at this stage')
+        end
+      end
+
 
       # PATCH /api/v1/shipments/:id/complete
       def complete
@@ -136,18 +171,18 @@ module Api
       end
 
       # PATCH /api/v1/shipments/:id/cancel
-      def cancel
-        if @shipment.pending? && (current_user.user_role == 'market' || current_user.user_role == 'farmer')
-          @shipment.update!(status: 'cancelled')
-          render json: {
-            success: true,
-            message: 'Shipment cancelled',
-            data: ShipmentSerializer.new(@shipment).as_json
-          }
-        else
-          render_error('Cannot cancel shipment at this stage')
-        end
-      end
+      # def cancel
+      #   if @shipment.pending? && (current_user.user_role == 'market' || current_user.user_role == 'farmer')
+      #     @shipment.update!(status: 'cancelled')
+      #     render json: {
+      #       success: true,
+      #       message: 'Shipment cancelled',
+      #       data: ShipmentSerializer.new(@shipment).as_json
+      #     }
+      #   else
+      #     render_error('Cannot cancel shipment at this stage')
+      #   end
+      # end
 
       # DELETE /api/v1/shipments/:id
       def destroy

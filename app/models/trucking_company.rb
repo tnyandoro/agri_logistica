@@ -2,6 +2,7 @@ class TruckingCompany < ApplicationRecord
   belongs_to :user
   has_many :shipment_bids, dependent: :destroy
   has_many :shipments, dependent: :destroy
+  has_many :deliveries, class_name: 'Shipment', foreign_key: 'trucking_company_id'
   
   # NO serialize needed - PostgreSQL handles these natively
   # For text arrays
