@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module Api
   module V1
     class BaseController < ActionController::API
@@ -15,42 +16,41 @@ module Api
 
       private
 
-      # ------------------------
+      # --------------------------------------------------
       # Authentication
-      # ------------------------
+      # --------------------------------------------------
       def authenticate_api_user!
         token = extract_token
 
-        if token.blank?
-          return render json: { error: 'No authorization token provided' }, status: :unauthorized
-        end
+        return render json: { error: 'No authorization token provided' }, status: :unauthorized if token.blank?
 
-        begin
-          decoded_token = decode_token(token)
-          user_id = decoded_token[0]['user_id']
-          @current_user = User.find(user_id)
-        rescue ActiveRecord::RecordNotFound
-          render json: { error: 'User not found' }, status: :unauthorized
-        rescue JWT::DecodeError, JWT::ExpiredSignature => e
-          render json: { error: 'Invalid or expired token', message: e.message }, status: :unauthorized
-        end
+        decoded_token = decode_token(token)
+        user_id = decoded_token[0]['user_id']
+        @current_user = User.find(user_id)
+
+      rescue ActiveRecord::RecordNotFound
+        render json: { error: 'User not found' }, status: :unauthorized
+      rescue JWT::DecodeError, JWT::ExpiredSignature => e
+        render json: { error: 'Invalid or expired token', message: e.message }, status: :unauthorized
       end
 
       def current_user
         @current_user
       end
 
-      # ------------------------
-      # Profile completion
-      # ------------------------
+      # --------------------------------------------------
+      # Profile completion enforcement
+      # --------------------------------------------------
       def check_profile_completion
         return unless @current_user
 
-        skip_controllers = ['profiles', 'dashboard']
+        # Allow profile-related controllers only
+        skip_controllers = ['profiles']
         return if skip_controllers.include?(controller_name)
 
         unless @current_user.profile_complete?
-          render json: { 
+          render json: {
+            success: false,
             error: 'Profile incomplete. Please complete your profile to continue.',
             profile_complete: false,
             user_role: @current_user.user_role,
@@ -59,13 +59,14 @@ module Api
         end
       end
 
-      # ------------------------
+      # --------------------------------------------------
       # JWT helpers
-      # ------------------------
+      # --------------------------------------------------
       def extract_token
         auth_header = request.headers['Authorization']
         return nil if auth_header.blank?
-        auth_header.start_with?('Bearer ') ? auth_header.split(' ').last : auth_header
+
+        auth_header.start_with?('Bearer ') ? auth_header.split.last : auth_header
       end
 
       def decode_token(token)
@@ -73,7 +74,7 @@ module Api
           token,
           Rails.application.credentials.secret_key_base,
           true,
-          { algorithm: 'HS256' }
+          algorithm: 'HS256'
         )
       end
 
@@ -82,40 +83,66 @@ module Api
         JWT.encode(payload, Rails.application.credentials.secret_key_base, 'HS256')
       end
 
-      # ------------------------
+      # --------------------------------------------------
       # Error handlers
-      # ------------------------
+      # --------------------------------------------------
       def not_found(exception)
-        render json: { error: 'Resource not found', message: exception.message }, status: :not_found
+        render json: {
+          success: false,
+          error: 'Resource not found',
+          message: exception.message
+        }, status: :not_found
       end
 
       def unprocessable_entity(exception)
-        render json: { 
-          error: 'Validation failed', 
-          message: exception.message, 
-          details: exception.record.errors.full_messages 
+        render json: {
+          success: false,
+          error: 'Validation failed',
+          message: exception.message,
+          details: exception.record.errors.full_messages
         }, status: :unprocessable_entity
       end
 
       def bad_request(exception)
-        render json: { error: 'Bad request', message: exception.message }, status: :bad_request
+        render json: {
+          success: false,
+          error: 'Bad request',
+          message: exception.message
+        }, status: :bad_request
       end
 
-      def invalid_token(exception)
-        render json: { error: 'Invalid token', message: 'The provided authentication token is invalid' }, status: :unauthorized
+      def invalid_token(_exception)
+        render json: {
+          success: false,
+          error: 'Invalid token',
+          message: 'The provided authentication token is invalid'
+        }, status: :unauthorized
       end
 
-      def expired_token(exception)
-        render json: { error: 'Token expired', message: 'Your session has expired. Please sign in again.' }, status: :unauthorized
+      def expired_token(_exception)
+        render json: {
+          success: false,
+          error: 'Token expired',
+          message: 'Your session has expired. Please sign in again.'
+        }, status: :unauthorized
       end
 
-      # ------------------------
-      # Pagination
-      # ------------------------
+      # --------------------------------------------------
+      # Pagination (SAFE)
+      # --------------------------------------------------
       def paginate(collection)
-        page = params[:page] || 1
-        per_page = [params[:per_page].to_i, 100].min || 20
+        page = (params[:page].presence || 1).to_i
+
+        raw_per_page = params[:per_page].to_i
+        per_page =
+          if raw_per_page <= 0
+            20
+          else
+            raw_per_page.clamp(1, 100)
+          end
+
         paginated = collection.page(page).per(per_page)
+
         {
           data: paginated,
           meta: {
@@ -128,9 +155,9 @@ module Api
         }
       end
 
-      # ------------------------
+      # --------------------------------------------------
       # Response helpers
-      # ------------------------
+      # --------------------------------------------------
       def render_success(data, message: nil, status: :ok, meta: nil)
         response = { success: true, data: data }
         response[:message] = message if message
@@ -156,9 +183,9 @@ module Api
         render json: { success: true, message: message }, status: :ok
       end
 
-      # ------------------------
-      # Profile completion path
-      # ------------------------
+      # --------------------------------------------------
+      # Profile completion routing
+      # --------------------------------------------------
       def profile_completion_path
         case @current_user.user_role
         when 'farmer'

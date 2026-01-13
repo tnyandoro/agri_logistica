@@ -55,6 +55,10 @@ class ProduceListing < ApplicationRecord
     quantity * price_per_unit
   end
 
+  def quantity_available
+    quantity
+  end
+
   private
 
   def available_until_after_available_from

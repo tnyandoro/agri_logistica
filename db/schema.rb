@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_12_233222) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_13_083237) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -190,6 +190,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_12_233222) do
     t.integer "user_role", default: 0, null: false
     t.string "phone_number", null: false
     t.boolean "verified", default: false
+    t.datetime "last_sign_in_at"
+    t.datetime "current_sign_in_at"
+    t.string "last_sign_in_ip"
+    t.string "current_sign_in_ip"
+    t.integer "sign_in_count"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["phone_number"], name: "index_users_on_phone_number", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
