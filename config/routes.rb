@@ -1,79 +1,81 @@
 Rails.application.routes.draw do
+  # ============================================================
+  # DEVISE – API-only, JSON-only auth
+  # ============================================================
+  devise_for :users,
+             controllers: {
+               registrations: 'users/registrations',
+               sessions: 'users/sessions'
+             },
+             defaults: { format: :json },
+             skip: [:passwords, :confirmations, :unlocks]
+
+  # Root endpoint
+  root to: 'api/v1/home#index'
+
+  # ============================================================
+  # API V1 – JSON defaults
+  # ============================================================
   namespace :api do
-    namespace :v1 do
-      get "produce_listings/index"
-      get "produce_listings/show"
-    end
-  end
-  get "shipments/index"
-  get "shipments/show"
-  get "shipments/new"
-  get "shipments/create"
-  get "shipments/edit"
-  get "shipments/update"
-  get "market_profiles/show"
-  get "market_profiles/edit"
-  get "market_profiles/update"
-  get "trucking_companies/show"
-  get "trucking_companies/edit"
-  get "trucking_companies/update"
-  get "farmer_profiles/show"
-  get "farmer_profiles/edit"
-  get "farmer_profiles/update"
-  get "home/index"
-  
-  devise_for :users, controllers: {
-    registrations: 'users/registrations'
-  }
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
-  root 'home#index'
-  
-  # user_role-based registration routes
-  get '/register/:user_role', to: 'users/registrations#new', as: :user_role_registration, constraints: { user_role: /farmer|trucker|market/ }
-  get '/complete_profile', to: 'users/registrations#complete_profile'
-  patch '/update_profile', to: 'users/registrations#update_profile'
-  
-  # Dashboard
-  get '/dashboard', to: 'dashboard#index'
-  
-  # Main resources
-  resources :produce_listings do
-    resources :produce_requests, except: [:index]
-  end
-  
-  resources :shipments do
-    resources :shipment_bids, except: [:index, :show]
-  end
-  
-  resources :farmer_profiles, only: [:show, :edit, :update]
-  resources :trucking_companies, only: [:show, :edit, :update]  
-  resources :market_profiles, only: [:show, :edit, :update]
-  
-  resources :notifications, only: [:index, :show, :update]
-  
-  # Search and filtering
-  get '/search', to: 'search#index'
-  get '/browse/:category', to: 'browse#show', as: :browse_category
-  
-  # API routes for mobile/ajax
-  namespace :api do
-    namespace :v1 do
+    namespace :v1, defaults: { format: :json } do
+      
+      # -------------------------
+      # Authentication (JWT)
+      # -------------------------
+      post   'login',  to: 'sessions#create'
+      delete 'logout', to: 'sessions#destroy'
+      post   'users',  to: 'registrations#create'
+
+      # -------------------------
+      # Dashboard & Portal
+      # -------------------------
+      get 'dashboard', to: 'dashboard#index'
+      get 'portal',    to: 'portal#index'
+
+      # -------------------------
+      # Public endpoints
+      # -------------------------
       resources :produce_listings, only: [:index, :show]
-      resources :markets, only: [:index]
-      resources :truckers, only: [:index]
-      resources :search, only: [:index]
+      resources :markets,          only: [:index, :show]
+      resources :truckers,         only: [:index, :show]
+      get 'search', to: 'search#index'
+
+      # -------------------------
+      # Authenticated endpoints
+      # -------------------------
+      resources :farmer_profiles, only: [:show, :update] do
+        member { get 'dashboard' }
+      end
+
+      resources :produce_listings, only: [:create, :update, :destroy] do
+        resources :produce_requests, except: [:index]
+      end
+
+      resources :trucking_companies, only: [:show, :update] do
+        member { get 'dashboard' }
+      end
+
+      resources :shipments do
+        resources :shipment_bids, except: [:index, :show]
+      end
+
+      resources :market_profiles, only: [:show, :update] do
+        member { get 'dashboard' }
+      end
+
+      resources :notifications, only: [:index, :show, :update] do
+        collection { patch 'mark_all_read' }
+      end
+
+      resource :profile, only: [:show, :update] do
+        patch 'complete'
+      end
+
+      get 'browse/:category', to: 'browse#show'
     end
   end
 
-  # Health check
-  get "up" => "rails/health#show", as: :rails_health_check
-
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
-  # Defines the root path route ("/")
-  # root "posts#index"
+  # Health check & docs
+  get 'up',       to: 'rails/health#show', as: :rails_health_check
+  get 'api/docs', to: 'api/documentation#index'
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_13_083237) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -28,6 +28,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
     t.decimal "longitude", precision: 15, scale: 10
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "business_name"
     t.index ["latitude", "longitude"], name: "index_farmer_profiles_on_latitude_and_longitude"
     t.index ["produce_types"], name: "index_farmer_profiles_on_produce_types", using: :gin
     t.index ["user_id"], name: "index_farmer_profiles_on_user_id", unique: true
@@ -46,6 +47,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
     t.decimal "longitude", precision: 15, scale: 10
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "contact_person"
+    t.text "description"
+    t.string "purchase_volume"
+    t.string "delivery_preferences"
+    t.boolean "organic_certified", default: false
+    t.boolean "gap_certified", default: false
+    t.boolean "haccp_certified", default: false
+    t.string "additional_requirements"
+    t.string "business_name"
     t.index ["latitude", "longitude"], name: "index_market_profiles_on_latitude_and_longitude"
     t.index ["market_type"], name: "index_market_profiles_on_market_type"
     t.index ["preferred_produces"], name: "index_market_profiles_on_preferred_produces", using: :gin
@@ -61,7 +71,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
     t.json "data", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "notifiable_type"
+    t.bigint "notifiable_id"
     t.index ["created_at"], name: "index_notifications_on_created_at"
+    t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable"
     t.index ["notification_type"], name: "index_notifications_on_notification_type"
     t.index ["user_id", "read_at"], name: "index_notifications_on_user_id_and_read_at"
     t.index ["user_id"], name: "index_notifications_on_user_id"
@@ -82,6 +95,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
     t.boolean "organic", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "total_value"
     t.index ["available_from", "available_until"], name: "index_produce_listings_on_available_from_and_available_until"
     t.index ["farmer_profile_id"], name: "index_produce_listings_on_farmer_profile_id"
     t.index ["organic"], name: "index_produce_listings_on_organic"
@@ -157,6 +171,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
     t.string "contact_person"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "business_name"
+    t.integer "capacity"
+    t.string "location"
     t.index ["company_name"], name: "index_trucking_companies_on_company_name"
     t.index ["user_id"], name: "index_trucking_companies_on_user_id", unique: true
     t.index ["vehicle_types"], name: "index_trucking_companies_on_vehicle_types", using: :gin
@@ -171,10 +188,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_30_160018) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "user_role", default: 0, null: false
-    t.string "phone", null: false
+    t.string "phone_number", null: false
     t.boolean "verified", default: false
+    t.datetime "last_sign_in_at"
+    t.datetime "current_sign_in_at"
+    t.string "last_sign_in_ip"
+    t.string "current_sign_in_ip"
+    t.integer "sign_in_count"
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["phone"], name: "index_users_on_phone", unique: true
+    t.index ["phone_number"], name: "index_users_on_phone_number", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["user_role"], name: "index_users_on_user_role"
   end

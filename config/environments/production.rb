@@ -11,6 +11,13 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = false
+
+  # Around line 22
+  config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present? || ENV['RENDER'].present?
+
+  # Around line 28
+  config.assume_ssl = true
+  config.force_ssl = true
   
   config.action_mailer.smtp_settings = {
     address: 'smtp.gmail.com',

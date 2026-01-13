@@ -17,21 +17,26 @@ test:
   username: postgres
   password: Mybreak28#
 
+# production:
+#   primary: &primary_production
+#     <<: *default
+#     database: agricultural_logistics_production
+#     username: agricultural_logistics
+#     password: <%= ENV["AGRICULTURAL_LOGISTICS_DATABASE_PASSWORD"] %>
+#   cache:
+#     <<: *primary_production
+#     database: agricultural_logistics_production_cache
+#     migrations_paths: db/cache_migrate
+#   queue:
+#     <<: *primary_production
+#     database: agricultural_logistics_production_queue
+#     migrations_paths: db/queue_migrate
+#   cable:
+#     <<: *primary_production
+#     database: agricultural_logistics_production_cable
+#     migrations_paths: db/cable_migrate
+
 production:
-  primary: &primary_production
-    <<: *default
-    database: agricultural_logistics_production
-    username: agricultural_logistics
-    password: <%= ENV["AGRICULTURAL_LOGISTICS_DATABASE_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: agricultural_logistics_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: agricultural_logistics_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: agricultural_logistics_production_cable
-    migrations_paths: db/cable_migrate
+  <<: *default
+  url: <%= ENV['DATABASE_URL'] %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>

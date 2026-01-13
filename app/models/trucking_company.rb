@@ -2,11 +2,27 @@ class TruckingCompany < ApplicationRecord
   belongs_to :user
   has_many :shipment_bids, dependent: :destroy
   has_many :shipments, dependent: :destroy
+  has_many :deliveries, class_name: 'Shipment', foreign_key: 'trucking_company_id'
   
-  validates :company_name, presence: true, length: { minimum: 2, maximum: 100 }
-  validates :vehicle_types, presence: true
-  validates :registration_numbers, presence: true
-  validates :contact_person, presence: true
+  # NO serialize needed - PostgreSQL handles these natively
+  # For text arrays
+  attribute :vehicle_types, :text, array: true, default: []
+  attribute :registration_numbers, :text, array: true, default: []
+  
+  # For json arrays - just set defaults
+  attribute :routes, default: []
+  attribute :rates, default: []
+  
+  # Conditional validations
+  validates :business_name, presence: true, length: { minimum: 2, maximum: 100 }, 
+            unless: :skip_validation?
+  validates :company_name, presence: true, length: { minimum: 2, maximum: 100 }, 
+            unless: :skip_validation?
+  validates :vehicle_types, presence: true, unless: :skip_validation?
+  validates :registration_numbers, presence: true, unless: :skip_validation?
+  validates :contact_person, presence: true, unless: :skip_validation?
+  validates :fleet_size, numericality: { greater_than: 0 }, 
+            allow_nil: true, unless: :skip_validation?
   
   VEHICLE_TYPES = [
     'Refrigerated Truck', 'Flatbed', 'Pickup', 'Box Truck', 
@@ -26,7 +42,6 @@ class TruckingCompany < ApplicationRecord
   def calculate_shipping_cost(distance_km, cargo_type = 'general')
     base_rate = base_rate_per_km
     
-    # Adjust rate based on cargo type
     multiplier = case cargo_type.downcase
                 when 'refrigerated', 'perishable' then 1.5
                 when 'livestock' then 1.8
@@ -39,5 +54,20 @@ class TruckingCompany < ApplicationRecord
 
   def active_shipments_count
     shipments.where(status: [:pending, :in_transit]).count
+  end
+
+  # Returns the display name - prioritizes business_name
+  def display_name
+    business_name.presence || company_name.presence || "Unnamed Company"
+  end
+
+  private
+
+  def skip_validation?
+    user&.new_record? || all_fields_blank?
+  end
+
+  def all_fields_blank?
+    business_name.blank? && company_name.blank? && contact_person.blank?
   end
 end

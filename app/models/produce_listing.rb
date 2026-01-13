@@ -2,7 +2,7 @@ class ProduceListing < ApplicationRecord
   # Associations
   belongs_to :farmer_profile
   has_many :produce_requests, dependent: :destroy
-  has_many :deliveries, dependent: :destroy
+  has_many :shipments, dependent: :destroy 
   has_many :notifications, as: :notifiable, dependent: :destroy
 
   # Validations
@@ -16,7 +16,7 @@ class ProduceListing < ApplicationRecord
   validates :available_until, presence: true
   validate :available_until_after_available_from
 
-  # Enum for status - CORRECTED SYNTAX
+  # Enum for status
   enum :status, { available: 0, reserved: 1, sold: 2, expired: 3 }
 
   # Scopes
@@ -55,6 +55,10 @@ class ProduceListing < ApplicationRecord
     quantity * price_per_unit
   end
 
+  def quantity_available
+    quantity
+  end
+
   private
 
   def available_until_after_available_from
@@ -71,14 +75,17 @@ class ProduceListing < ApplicationRecord
 
   def notify_interested_markets
     # Find markets interested in this produce type
-    interested_markets = MarketProfile.where("preferred_produces LIKE ?", "%#{produce_type}%")
+    interested_markets = MarketProfile.all.select do |market|
+      market.preferred_produces.include?(produce_type)
+    end
     
     interested_markets.each do |market|
-      Notification.create(
+      Notification.create!(
         user: market.user,
-        notifiable: self,
-        notification_type: 'new_listing',
-        message: "New #{produce_type} listing available from #{farmer_profile.farm_name}"
+        title: "New Listing Available",
+        message: "New #{produce_type} listing from #{farmer_profile.farm_name}",
+        notification_type: :match,
+        data: { listing_id: id }
       )
     end
   end
