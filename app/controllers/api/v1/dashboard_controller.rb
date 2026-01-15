@@ -1,17 +1,11 @@
-# app/controllers/api/v1/dashboard_controller.rb
+# frozen_string_literal: true
 module Api
   module V1
     class DashboardController < Api::V1::BaseController
       before_action :ensure_profile_present!
 
       def index
-        render json: {
-          user_role: current_user.user_role,
-          profile: profile_data,
-          statistics: build_statistics,
-          recent_listings: recent_listings_data,
-          charts: build_charts
-        }
+        render json: dashboard_payload
       rescue StandardError => e
         Rails.logger.error <<~LOG
           Dashboard Error:
@@ -19,17 +13,28 @@ module Api
           #{e.backtrace.first(10).join("\n")}
         LOG
 
-        render json: {
+        render json: dashboard_payload.merge(
           error: 'Failed to load dashboard data',
-          message: e.message,
-          user_role: current_user&.user_role,
-          statistics: {},
-          recent_listings: [],
-          charts: {}
-        }, status: :internal_server_error
+          message: e.message
+        ), status: :internal_server_error
       end
 
       private
+
+      # -----------------------------------
+      # Main Payload
+      # -----------------------------------
+      def dashboard_payload
+        {
+          user_role: current_user.user_role,
+          identity: identity_data,
+          meta: meta_data,
+          profile: profile_data,
+          statistics: build_statistics,
+          recent_listings: recent_listings_data,
+          charts: build_charts
+        }
+      end
 
       # -----------------------------------
       # Guards
@@ -41,6 +46,52 @@ module Api
           error: 'Profile incomplete',
           redirect_to: '/profile/complete'
         }, status: :unprocessable_entity
+      end
+
+      # -----------------------------------
+      # Identity (Header Info)
+      # -----------------------------------
+      def identity_data
+        profile = current_user.profile
+
+        {
+          person_name: profile.try(:full_name) || current_user.email,
+          company_name: extract_company_name(profile),
+          avatar_url: avatar_url_for(current_user)
+        }
+      end
+
+      def extract_company_name(profile)
+        return nil unless profile
+
+        case current_user.user_role
+        when 'farmer'  then profile.farm_name || profile.business_name
+        when 'trucker' then profile.company_name
+        when 'market'  then profile.market_name
+        else nil
+        end
+      end
+
+      def avatar_url_for(user)
+        # If you use ActiveStorage:
+        if user.respond_to?(:avatar) && user.avatar.attached?
+          Rails.application.routes.url_helpers.rails_blob_url(
+            user.avatar,
+            only_path: false
+          )
+        else
+          nil
+        end
+      end
+
+      # -----------------------------------
+      # Meta (Time / Date)
+      # -----------------------------------
+      def meta_data
+        {
+          server_time: Time.current.strftime('%Y-%m-%d %H:%M'),
+          timezone: Time.zone.name
+        }
       end
 
       # -----------------------------------
