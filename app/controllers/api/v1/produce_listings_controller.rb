@@ -1,55 +1,74 @@
 module Api
-  module V1      
-    class Api::V1::ProduceListingsController < ApplicationController
-      before_action :authenticate_user!
-      before_action :ensure_farmer!, except: [:index, :show]
-      before_action :set_produce_listing, only: [:show, :edit, :update, :destroy]
-      before_action :ensure_owner!, only: [:edit, :update, :destroy]
+  module V1
+    class ProduceListingsController < BaseController
+      before_action :authenticate_api_user!
+      before_action :set_produce_listing, only: [:show, :update, :destroy]
+      before_action :ensure_farmer!, only: [:create, :update, :destroy]
+      before_action :ensure_owner!, only: [:update, :destroy]
 
+      # GET /api/v1/produce_listings
       def index
-        @q = ProduceListing.available_now.includes(:farmer_profile).ransack(params[:q])
-        @produce_listings = @q.result.page(params[:page]).per(12)
-        @produce_types = ProduceListing.distinct.pluck(:produce_type).compact.sort
+        listings = ProduceListing
+                     .available_now
+                     .includes(:farmer_profile)
+                     .order(created_at: :desc)
+
+        render json: {
+          data: listings.map { |l| serialize_listing(l) }
+        }
       end
 
+      # GET /api/v1/produce_listings/:id
       def show
-        @produce_request = ProduceRequest.new if current_user&.market?
-        @similar_listings = ProduceListing.available_now
-                                        .where(produce_type: @produce_listing.produce_type)
-                                        .where.not(id: @produce_listing.id)
-                                        .limit(4)
+        render json: {
+          data: serialize_listing(@produce_listing),
+          similar: ProduceListing
+                     .available_now
+                     .where(produce_type: @produce_listing.produce_type)
+                     .where.not(id: @produce_listing.id)
+                     .limit(4)
+                     .map { |l| serialize_listing(l) }
+        }
       end
 
-      def new
-        @produce_listing = current_user.farmer_profile.produce_listings.build
-      end
-
+      # POST /api/v1/produce_listings
       def create
-        @produce_listing = current_user.farmer_profile.produce_listings.build(produce_listing_params)
+        listing = current_user.farmer_profile.produce_listings.build(produce_listing_params)
 
-        if @produce_listing.save
-          # Trigger matching job
-          MatchNotificationJob.perform_later(@produce_listing.id)
-          redirect_to @produce_listing, notice: 'Produce listing was successfully created.'
+        if listing.save
+          MatchNotificationJob.perform_later(listing.id)
+
+          render json: {
+            message: "Produce listing created successfully",
+            data: serialize_listing(listing)
+          }, status: :created
         else
-          render :new, status: :unprocessable_entity
+          render json: {
+            error: "Validation failed",
+            details: listing.errors.full_messages
+          }, status: :unprocessable_entity
         end
       end
 
-      def edit
-      end
-
+      # PATCH/PUT /api/v1/produce_listings/:id
       def update
         if @produce_listing.update(produce_listing_params)
-          redirect_to @produce_listing, notice: 'Produce listing was successfully updated.'
+          render json: {
+            message: "Produce listing updated successfully",
+            data: serialize_listing(@produce_listing)
+          }
         else
-          render :edit, status: :unprocessable_entity
+          render json: {
+            error: "Validation failed",
+            details: @produce_listing.errors.full_messages
+          }, status: :unprocessable_entity
         end
       end
 
+      # DELETE /api/v1/produce_listings/:id
       def destroy
         @produce_listing.destroy
-        redirect_to produce_listings_url, notice: 'Produce listing was successfully deleted.'
+        render json: { message: "Produce listing deleted successfully" }
       end
 
       private
@@ -59,19 +78,51 @@ module Api
       end
 
       def ensure_farmer!
-        redirect_to root_path, alert: 'Access denied.' unless current_user.farmer?
+        unless current_user.farmer?
+          render json: { error: "Only farmers can perform this action" }, status: :forbidden
+        end
       end
 
       def ensure_owner!
-        redirect_to root_path, alert: 'Access denied.' unless @produce_listing.farmer_profile == current_user.farmer_profile
+        unless @produce_listing.farmer_profile == current_user.farmer_profile
+          render json: { error: "You do not own this listing" }, status: :forbidden
+        end
       end
 
       def produce_listing_params
         params.require(:produce_listing).permit(
-          :title, :description, :produce_type, :quantity, :unit, 
-          :price_per_unit, :available_from, :available_until, :organic,
+          :title,
+          :description,
+          :produce_type,
+          :quantity,
+          :unit,
+          :price_per_unit,
+          :available_from,
+          :available_until,
+          :organic,
           quality_specs: {}
         )
+      end
+
+      def serialize_listing(listing)
+        {
+          id: listing.id,
+          title: listing.title,
+          description: listing.description,
+          produce_type: listing.produce_type,
+          quantity: listing.quantity,
+          unit: listing.unit,
+          price_per_unit: listing.price_per_unit,
+          available_from: listing.available_from,
+          available_until: listing.available_until,
+          organic: listing.organic,
+          created_at: listing.created_at,
+          farmer: {
+            id: listing.farmer_profile.id,
+            farm_name: listing.farmer_profile.farm_name,
+            location: listing.farmer_profile.location
+          }
+        }
       end
     end
   end
