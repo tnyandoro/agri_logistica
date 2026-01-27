@@ -5,7 +5,7 @@
 # docker build -t agricultural_logistics .
 # docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name agricultural_logistics agricultural_logistics
 
-# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html  
+# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html    
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version
 ARG RUBY_VERSION=3.2.2
@@ -50,6 +50,9 @@ RUN chmod +x bin/* && \
 RUN bundle exec bootsnap precompile app/ lib/
 
 # Precompile assets for production without requiring secret RAILS_MASTER_KEY
+# Provide dummy environment variables to avoid KeyError during build
+ENV DATABASE_URL="postgres://dummy:dummy@localhost/dummy" \
+    REDIS_URL="redis://localhost:6379/0"
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 # Final stage for app image
