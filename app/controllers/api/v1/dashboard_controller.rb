@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module Api
   module V1
     class DashboardController < Api::V1::BaseController
@@ -55,25 +56,43 @@ module Api
         profile = current_user.profile
 
         {
-          person_name: profile.try(:full_name) || current_user.email,
+          person_name: extract_person_name(profile),
           company_name: extract_company_name(profile),
           avatar_url: avatar_url_for(current_user)
         }
+      end
+
+      def extract_person_name(profile)
+        return current_user.email unless profile
+
+        case current_user.user_role
+        when 'farmer'
+          profile.full_name.presence || current_user.email
+        when 'trucker'
+          profile.contact_person.presence || profile.company_name.presence || current_user.email
+        when 'market'
+          profile.contact_person.presence || profile.market_name.presence || current_user.email
+        else
+          current_user.email
+        end
       end
 
       def extract_company_name(profile)
         return nil unless profile
 
         case current_user.user_role
-        when 'farmer'  then profile.farm_name || profile.business_name
-        when 'trucker' then profile.company_name
-        when 'market'  then profile.market_name
-        else nil
+        when 'farmer'
+          profile.farm_name.presence || profile.business_name
+        when 'trucker'
+          profile.company_name
+        when 'market'
+          profile.market_name
+        else
+          nil
         end
       end
 
       def avatar_url_for(user)
-        # If you use ActiveStorage:
         if user.respond_to?(:avatar) && user.avatar.attached?
           Rails.application.routes.url_helpers.rails_blob_url(
             user.avatar,
@@ -118,13 +137,15 @@ module Api
             company_name: profile.company_name,
             vehicle_types: profile.vehicle_types,
             capacity: profile.capacity,
-            location: profile.location
+            location: profile.location,
+            contact_person: profile.contact_person
           )
         when 'market'
           base.merge(
             market_name: profile.market_name,
             location: profile.location,
-            description: profile.description
+            description: profile.description,
+            contact_person: profile.contact_person
           )
         else
           base
@@ -136,10 +157,14 @@ module Api
       # -----------------------------------
       def build_statistics
         case current_user.user_role
-        when 'farmer'  then farmer_stats
-        when 'trucker' then trucker_stats
-        when 'market'  then market_stats
-        else {}
+        when 'farmer'
+          farmer_stats
+        when 'trucker'
+          trucker_stats
+        when 'market'
+          market_stats
+        else
+          {}
         end
       end
 

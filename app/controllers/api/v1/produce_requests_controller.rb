@@ -13,10 +13,22 @@ module Api
         @produce_request.status = :pending
 
         if @produce_request.save
+          # Handle trucking company assignment if provided
+          if params[:produce_request][:trucking_company_id].present?
+            assign_trucking_company(@produce_request, params[:produce_request][:trucking_company_id])
+          end
+
           NotificationService.notify_farmer_of_request(@produce_request)
-          render json: { success: true, data: @produce_request }, status: :created
+          render json: { 
+            success: true, 
+            data: serialize_produce_request(@produce_request),
+            message: "Order placed successfully!"
+          }, status: :created
         else
-          render json: { success: false, errors: @produce_request.errors.full_messages }, status: :unprocessable_entity
+          render json: { 
+            success: false, 
+            errors: @produce_request.errors.full_messages 
+          }, status: :unprocessable_entity
         end
       end
 
@@ -79,7 +91,41 @@ module Api
       end
 
       def produce_request_params
-        params.require(:produce_request).permit(:quantity, :price_offered, :message)
+        params.require(:produce_request).permit(
+          :quantity, 
+          :price_offered, 
+          :message,
+          :trucking_company_id
+        )
+      end
+
+      def serialize_produce_request(request)
+        {
+          id: request.id,
+          quantity: request.quantity,
+          price_offered: request.price_offered,
+          message: request.message,
+          status: request.status,
+          created_at: request.created_at,
+          market_profile: {
+            id: request.market_profile.id,
+            market_name: request.market_profile.market_name
+          },
+          trucking_company_id: request.trucking_company_id
+        }
+      end
+
+      def assign_trucking_company(produce_request, trucking_company_id)
+        # Validate trucking company exists
+        trucking_company = TruckingCompany.find_by(id: trucking_company_id)
+        return unless trucking_company
+
+        # You can either:
+        # 1. Create shipment immediately, or
+        # 2. Store the trucking_company_id for later assignment
+        
+        # For now, just store the ID
+        produce_request.update!(trucking_company_id: trucking_company_id)
       end
     end
   end
