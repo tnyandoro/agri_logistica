@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Api
   module V1
     class ProduceListingsController < BaseController
@@ -5,30 +7,41 @@ module Api
       before_action :set_produce_listing, only: [:show, :update, :destroy]
       before_action :ensure_farmer!, only: [:create, :update, :destroy]
       before_action :ensure_owner!, only: [:update, :destroy]
-
+      
       # GET /api/v1/produce_listings
+      
       def index
         listings = ProduceListing
-                     .available_now
-                     .includes(:farmer_profile)
-                     .order(created_at: :desc)
+                    .available_now
+                    .includes(:farmer_profile)
+                    .order(created_at: :desc)
 
-        render json: {
-          data: listings.map { |l| serialize_listing(l) }
-        }
-      end
+        # 🔍 Full-text search across multiple fields
+        if params[:search].present?
+          search_term = "%#{params[:search].downcase.strip}%"
+          listings = listings.joins(:farmer_profile).where(
+            "LOWER(TRIM(produce_listings.title)) LIKE ? OR 
+            LOWER(TRIM(produce_listings.produce_type)) LIKE ? OR 
+            LOWER(TRIM(farmer_profiles.farm_name)) LIKE ?",
+            search_term,
+            search_term,
+            search_term
+          )
+        end
 
-      # GET /api/v1/produce_listings/:id
-      def show
-        render json: {
-          data: serialize_listing(@produce_listing),
-          similar: ProduceListing
-                     .available_now
-                     .where(produce_type: @produce_listing.produce_type)
-                     .where.not(id: @produce_listing.id)
-                     .limit(4)
-                     .map { |l| serialize_listing(l) }
-        }
+        # 🧪 Partial matching for specific filters
+        if params[:product_type].present?
+          search_term = "%#{params[:product_type].downcase.strip}%"
+          listings = listings.where("LOWER(TRIM(produce_type)) LIKE ?", search_term)
+        end
+
+        if params[:farm_name].present?
+          search_term = "%#{params[:farm_name].downcase.strip}%"
+          listings = listings.joins(:farmer_profile)
+                            .where("LOWER(TRIM(farmer_profiles.farm_name)) LIKE ?", search_term)
+        end
+
+        render json: { data: listings.map { |l| serialize_listing(l) } }
       end
 
       # POST /api/v1/produce_listings

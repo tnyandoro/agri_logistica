@@ -1,3 +1,4 @@
+# app/models/produce_listing.rb
 class ProduceListing < ApplicationRecord
   # Associations
   belongs_to :farmer_profile
@@ -20,7 +21,11 @@ class ProduceListing < ApplicationRecord
   enum :status, { available: 0, reserved: 1, sold: 2, expired: 3 }
 
   # Scopes
-  scope :available_now, -> { where(status: :available).where('available_from <= ? AND available_until >= ?', Date.current, Date.current) }
+  scope :available_now, -> {
+  where(status: :available)
+      .where('available_from <= ?', Date.current)
+      .where('(available_until IS NULL) OR (available_until >= ?)', Date.current)
+  }
   scope :by_produce_type, ->(type) { where(produce_type: type) }
   scope :recent, -> { order(created_at: :desc) }
   scope :expiring_soon, -> { where(status: :available).where('available_until <= ?', 7.days.from_now) }
