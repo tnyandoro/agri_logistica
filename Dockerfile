@@ -5,7 +5,7 @@
 # docker build -t agricultural_logistics .
 # docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name agricultural_logistics agricultural_logistics
 
-# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
+# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html  
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version
 ARG RUBY_VERSION=3.2.2
@@ -42,15 +42,15 @@ RUN bundle install && \
 # Copy application code
 COPY . .
 
+# Fix bin file permissions (required for NTFS-mounted projects in WSL)
+RUN chmod +x bin/* && \
+    chmod +x bin/rails bin/rake bin/setup bin/docker-entrypoint
+
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
 
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
-# RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
-RUN chmod +x bin/* && SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
-
-
-
+# Precompile assets for production without requiring secret RAILS_MASTER_KEY
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 # Final stage for app image
 FROM base
